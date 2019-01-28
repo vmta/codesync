@@ -1,0 +1,225 @@
+#!/usr/bin/env bash
+
+#####################################################################
+# The purpose of this script is to initialize initial environment for
+# the ongoing synchronisation of GIT repositories.
+#
+# The script accepts arguments:
+# -b - followed by the list of branches to be set tracking on
+#      wrapped in quotes and branch names should be delimited
+#      with "|"
+# -h - display help and usage info and exit
+# -r - followed by the repository url, could be specified more than
+#      once on the command line
+# -x - reset tracking for specified branches
+#
+# If no arguments specified, the script will display help and usage
+# information with immediate execution abortion.
+#
+# Author: Igor Gunia <vmta@yahoo.com>
+# Date:   2019-01-19
+# Ver.:   0.1
+#####################################################################
+
+
+#####################################################################
+# VARIABLES
+#####################################################################
+#
+source common/variables;
+#
+REPOS=();
+REPO_URLS=();
+BRANCHES=();
+VERSION="0.1";
+#####################################################################
+
+
+#####################################################################
+# REDEFINE BUILTIN COMMANDS (SILENCER)
+#####################################################################
+source common/silencer;
+source common/repository;
+#####################################################################
+
+
+#####################################################################
+# Function displayHelp
+#
+# In case the script is called with no arguments, or arguments are
+# omitted, display short message with info on script version,
+# acceptable arguments and an example.
+#
+function displayHelp()
+{
+    local STRING="Script $( basename $0 ) version $VERSION\n
+                 Usage:\n
+                   $( basename $0 ) [b:hr:x]\n\n
+                 Options:\n
+                   -b \t Requires argument, a branch name to set\
+                         tracking on, several branches can be\
+                         specified delimited with '|' provided that\
+                         they are surrounded by quotes\n
+                   -h \t Requires no argument, display help info and\
+                         exit\n
+                   -r \t Requires argument, repo url, and could be set\
+                         more than once per script call (NOTE: there's\
+                         no need to specify \"master\" branch as it\
+                         gets checked-out by default)\n
+                   -x \t Requires no argument, reset tracking for\
+                         specified branches\n\n
+                 Example:\n
+                   $( basename $0 ) -b '0.17|0.16' -r\
+                   https://github.com/umkoin/umkoin.git\
+                   -r https://github.com/bitcoin/bitcoin.git\n\n
+                 On completion, there shall be both repositories\
+                 cloned locally with branches 0.17 and 0.16 set to be\
+                 tracked respectfully in each of the cloned\
+                 repositories, assuming the remotes have these\
+                 branches.\n";
+
+    echo -e $STRING;
+
+    exit 1;
+}
+#####################################################################
+
+
+#####################################################################
+# Function cloneRepo
+#
+# Effectively clone GIT repository from the provided URL.
+#
+function cloneRepo()
+{
+    local REPO_URL=$1;
+
+    echo "Trying to clone repository from $REPO_URL";
+    git clone $REPO_URL;
+    if [ $? -eq 0 ]; then
+        echo "Repository cloned successfully!";
+        if [ ${#BRANCHES[@]} -gt 0 ]; then
+            for BRANCH in ${BRANCHES[@]}; do
+                trackBranch $BRANCH;
+            done
+        fi
+    else
+        echo ">> Error: Repository not cloned from $REPO_URL <<";
+    fi
+}
+#####################################################################
+
+
+#####################################################################
+# Function trackBranch
+#
+# Effectively set tracking branches in cloned repository.
+#
+function trackBranch()
+{
+    local BRANCH=$1;
+    local REPO="";
+
+    [ -z $2 ] && REPO=$( echo ${REPO_URL##*/} | sed 's/\.git//' ) || REPO=$2;
+
+    pushd $REPO;
+
+    # First, get list of local branches and check if the
+    # branch in question exists locally. If branch exists
+    # locally, then checkout as usual, otherwise specify
+    # "-b" option to create-and-checkout.
+    local arr=( $( getLocalBranches ) );
+    echo "Checkout $BRANCH on $REPO";
+    [[ "${arr[*]}" == *"$BRANCH"* ]] && \
+        git checkout $BRANCH || \
+        git checkout -b $BRANCH;
+    if [ $? -eq 0 ]; then
+        echo "Success!";
+
+        # Second, rewind the history to the root
+        echo "Rewind the history for $BRANCH";
+        git reset --hard $( getInitCommit );
+
+        # Third, try to pull new commits for the
+        # branch and report the status of the trial
+        echo "Pull updates for $BRANCH on $REPO";
+        git pull origin $BRANCH;
+        if [ $? -eq 0 ]; then
+            echo "Success!";
+        else
+            echo ">> Error: pull $BRANCH updates failed <<";
+        fi
+
+    else
+        echo ">> Error: $BRANCH checkout failed <<";
+    fi
+
+    popd;
+}
+#####################################################################
+
+
+#####################################################################
+# Check if script is called with arguments.
+# Cycle through them.
+if [[ $# -gt 0 ]]; then
+
+    while getopts "b:hr:x" opt; do
+        case $opt in
+
+            b)  # Set branches to track (both repos)
+                if [ ! -z "$OPTARG" ]; then
+                    OLDIFS=$IFS;
+                    IFS='|' read -r -a BRANCHES <<< "$OPTARG";
+                    IFS=$OLDIFS;
+                fi
+                ;;
+
+            h)  # Display help and usage info and exit
+                displayHelp;
+                ;;
+
+            r)  # Set repository url and clone
+                if [ ! -z "$OPTARG" ]; then
+                    REPO_URLS+=( $OPTARG );
+                    REPOS+=( $( echo ${OPTARG##*/} | sed 's/\.git//' ) );
+                fi
+                ;;
+
+            x)  # Reset the branch tracking
+                RESET_TRACKING=1;
+                ;;
+
+            default) # Option is omitted
+                     # Display help and usage info and exit
+                displayHelp;
+                ;;
+
+        esac
+    done
+
+    if [ $RESET_TRACKING -eq 0 ]; then
+        if [ ${#REPO_URLS[@]} -gt 0 ]; then
+            for REPO_URL in ${REPO_URLS[@]}; do
+                cloneRepo $REPO_URL;
+            done
+        else
+            echo ">> Error: Need to specify at least one repository <<";
+        fi
+    else
+        if [[ ${#REPOS[@]} -gt 0 && ${#BRANCHES[@]} -gt 0 ]]; then
+            for REPO in ${REPOS[@]}; do
+                for BRANCH in ${BRANCHES[@]}; do
+                    trackBranch $BRANCH $REPO;
+                done
+            done
+        else
+            echo "Only master branch will be tracked.";
+        fi
+    fi
+
+else
+    displayHelp;
+fi
+
+exit $?

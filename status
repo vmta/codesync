@@ -1,0 +1,216 @@
+#!/usr/bin/env bash
+
+#####################################################################
+# The purpose of this script is to report status of the specified
+# repositories, whether they're synced at present. When given extra
+# arguments, will pull updates to repositories and report status
+# after this pull.
+#
+# The script accepts arguments:
+# -b - get branch name to compare repos (default to master)
+# -c - get cloned repository name (should be locally accessible)
+# -h - display help and usage info and exit
+# -m - get mainstream repository name (should be locally accessible)
+# -u - requires no arguments, will pull updates
+# -v - set verbosity level
+#
+# Author: Igor Gunia <vmta@yahoo.com>
+# Date:   2019-01-21
+# Ver.:   0.1
+#####################################################################
+
+
+#####################################################################
+# VARIABLES
+#####################################################################
+#
+source common/variables;
+#
+REPOS=();
+VERSION="0.1";
+#####################################################################
+
+
+#####################################################################
+# REDEFINE BUILTIN COMMANDS (SILENCER)
+#####################################################################
+source common/silencer;
+source common/repository;
+#####################################################################
+
+
+#####################################################################
+# Function displayHelp
+#
+# In case the script is called with no arguments, or arguments are
+# omitted, display short message with info on script version,
+# acceptable arguments and an example.
+#
+function displayHelp()
+{
+    local STRING="Script $( basename $0 ) version $VERSION\n
+                 Usage:\n
+                   $( basename $0 ) [b:c:hm:uv:]\n\n
+                 Options:\n
+                   -b \t Requires branch name. Defaults to\
+                         \"master\".\n
+                   -c \t Requires cloned repository name. The name\
+                         should be locally accessible (short name,\
+                         i.e. umkoin, bitcoin, etc).\n
+                   -h \t Requires no argument, display help info and\
+                         exit\n
+                   -m \t Requires mainstream repository name. The\
+                         name should be locally accessible (short\
+                         name, i.e. umkoin, bitcoin, etc).\n
+                   -u \t Requires no argument, pull updates to repos,\
+                         then report their status. If unspecified\
+                         repos are not updated prior to reporting\
+                         status.\n
+                   -v \t Requires no argument, when specified,\
+                         produces broader logs.\n\n
+                 Example:\n
+                   $( basename $0 ) -u\
+                                    -c umkoin\
+                                    -m bitcoin\
+                                    -b master\
+                                    -v\n
+                 On completion, the status for both repositories will\
+                 bo shown after pulling respective updates.\n";
+
+    echo -e $STRING;
+
+    exit 1;
+}
+#####################################################################
+
+
+#####################################################################
+# Function compareRepo
+#
+function compareRepo()
+{
+    local CLONE=$1;
+    local MAIN=$2;
+
+    local C_HEAD=""; # This one shall retrieve a mainstream commit
+                     # SHA1 from the subject of the latest commit.
+    local M_HEAD=""; # Actual HEAD of the MAINSTREAM.
+    local M_COMMITS=(); # Array of commits the CLONE is behind of
+                        # the MAINSTREAM.
+
+    pushd $CLONE;
+    git checkout -f $BRANCH > /dev/null 2>&1;
+    C_HEAD=$( getLastSyncedCommit );
+    popd;
+
+    pushd $MAIN;
+    git checkout -f $BRANCH > /dev/null 2>&1;
+    M_HEAD=$( git log -n 1 --format='%H' );
+    M_COMMITS=( $( getUnsyncedCommits $C_HEAD ) );
+
+    # Now as we gathered data, let's
+    # report usefull info.
+    #
+    # Such as:
+    # 1. HEAD SHA1 of the mainstream
+    # 2. SHA1 of the last commit the clone is synced to
+    # 3. SHA1 of the first unsynced commit
+    # 4. List of SHA1 commits starting from the latest
+    # 5. Total number of commits the clone is behind mainstream
+
+    echo "Mainstream is at $M_HEAD";
+    echo "Clone is synced to $C_HEAD";
+    [ ! -z $( getFirstUnsyncedCommit $C_HEAD ) ] && \
+        echo "First unsynced commit is $( getFirstUnsyncedCommit $C_HEAD )";
+
+    if [ ${#M_COMMITS[@]} -gt 0 ]; then
+        if [ $FLAG_DEBUG -gt 0 ]; then
+            for COMMIT in ${M_COMMITS[@]}; do
+                if [ $FLAG_DEBUG -gt 1 ]; then
+                    echo "  $( git log -n 1 --format='%H %aN %aD' $COMMIT )";
+                else
+                    echo "  $COMMIT";
+                fi
+            done
+        fi
+        echo "There are ${#M_COMMITS[@]} unsynced commits";
+    else
+        echo "Repositories are in sync";
+    fi
+    popd;
+
+}
+#####################################################################
+
+
+#####################################################################
+# Check if script is called with arguments.
+# Cycle through them.
+if [[ $# -gt 0 ]]; then
+
+    while getopts "b:c:hm:uv" opt; do
+        case $opt in
+
+            b)  # Set branch name
+                if [ ! -z "$OPTARG" ]; then
+                    BRANCH=$OPTARG;
+                fi
+                ;;
+
+            c)  # Set cloned repo name
+                if [ ! -z "$OPTARG" ]; then
+                    REPOS[0]=$OPTARG;
+                fi
+                ;;
+
+            h)  # Display help and usage info and exit
+                displayHelp;
+                ;;
+
+            m)  # Set mainstream repo name
+                if [ ! -z "$OPTARG" ]; then
+                    REPOS[1]=$OPTARG;
+                fi
+                ;;
+
+            u)  # Set FLAG_UPDATE
+                FLAG_UPDATE=1;
+                ;;
+
+            v)  # Set DEBUG
+                ((FLAG_DEBUG++));
+                ;;
+
+            default) # Option is omitted
+                     # Display help and usage info and exit
+                displayHelp;
+                ;;
+
+        esac
+    done
+
+    # If update was requested on the command line,
+    # checkout to BRANCH and proceed with local
+    # repos update.
+    if [ $FLAG_UPDATE -eq 1 ]; then
+        for REPO in ${REPOS[@]}; do
+            if [ -d $REPO ]; then
+                pushd $REPO;
+                    updateRepo $BRANCH;
+                popd;
+            else
+                echo ">> Error: cannot change working directory to local $REPO <<";
+            fi
+        done
+    fi
+
+    # Call compareRepo to actually compare repo
+    # statuses.
+    compareRepo ${REPOS[0]} ${REPOS[1]};
+
+else
+    displayHelp;
+fi
+
+
+exit $?

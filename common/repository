@@ -1,0 +1,193 @@
+#!/usr/bin/env bash
+
+#####################################################################
+# Collection of common functions regarding repository, branches and
+# commits.
+#
+# By default it is assumed that call to functions is made from within
+# the required repository/branch.
+#####################################################################
+
+
+#####################################################################
+# Function getInitCommit
+#
+# Return the string representation of an oldest (initial) commit SHA1
+# from the history log.
+#
+function getInitCommit()
+{
+    echo $( git log --reverse | head -1 | awk '{ print $2 }' );
+}
+
+
+#####################################################################
+# Function getHEAD
+#
+# Return the string representation of the current HEAD SHA1.
+#
+function getHEAD()
+{
+    echo $( git log -n 1 --format='%H' );
+}
+
+
+#####################################################################
+# Function getLastSyncedCommit
+#
+# Retrieve array of commits that follow certain naming/subject policy
+# on the cloned repository side, and return the string representation
+# of the mainstream repository's commit SHA1 the cloned repository is
+# synced to.
+#
+# Example:
+# Cloned repository follows the policy to set subject something like:
+# --
+# Sync to mainstream commit 0a0b2ea11fde7becbdd1c04205336c3a39bffbc0
+# (Mon, 7 Jan 2019 14:39:40 +0100)
+# --
+# Then, to retrieve all SHA1 of the mainstream it is neccessary to
+# loop through all grep'ed commits, get substring in 5th position and
+# put into an array. Final step will be to return the first element
+# from the array.
+#
+# NOTE: both REGEX and positional element could be manually adjusted,
+#       but the function would require certain modification.
+#       Consider two options:
+#       1. pass arguments to the function
+#       2. provide adjustable configuration options
+#
+function getLastSyncedCommit()
+{
+    local arr=();
+
+    for COMMIT in $( git log --format='%s' | \
+                     grep 'Sync to mainstream' | \
+                     awk '{ print $5 }' ); do
+        arr+=( $COMMIT );
+    done
+
+    if [ ${#arr[@]} -gt 0 ]; then
+        echo ${arr[0]};
+    fi
+}
+
+
+#####################################################################
+# Function getUnsyncedCommits
+#
+# Cycle through commits within given lower boundary and the HEAD of
+# the repository. The receiver will be able to form an array of SHA1.
+#
+# Example:
+#
+# UnsyncedCommitArray=( $( getUnsyncedCommits ) );
+#    UnsyncedCommitArray holds an array and could further be used as
+#    regular bash array ${UnsyncedCommitArray[@]}
+#
+# UnsyncedCommitString=$( getUnsyncedCommits );
+#   UnsyncedCommitString holds a one-line-string of commits,
+#   however, be careful, as this string has no delimiters to parse.
+#   Nevertheless it can still be used for comparison, i.e. testing
+#   if a string is a substring of this UnsyncedCommitString.
+#
+function getUnsyncedCommits()
+{
+    local LAST_SYNCED=$1;
+
+    for COMMIT in $( git log --format='%H' $LAST_SYNCED..HEAD ); do
+        echo $COMMIT;
+    done
+}
+
+
+#####################################################################
+# Function getFirstUnsyncedCommit
+#
+# Accept a SHA1 of the last synced commit, get array of unsynced
+# commits and return the SHA1 of the first element of the array.
+#
+function getFirstUnsyncedCommit()
+{
+    local LAST_SYNCED=$1;
+    local UnsyncedCommitArray=( $( getUnsyncedCommits $LAST_SYNCED ) );
+
+    if [ ${#UnsyncedCommitArray[@]} -gt 0 ]; then
+        echo ${UnsyncedCommitArray[-1]};
+    fi
+}
+
+
+#####################################################################
+# Function getLocalBranches
+#
+# Cycle through the local branches and return one at a time, so that
+# receiver will be able to form an array of strings.
+#
+# Example:
+#
+# BranchArray=( $( getLocalBranches ) );
+#   BranchArray holds an array and could further be used as
+#   usual bash array ${BranchArray[@]}
+#
+# BranchString=$( getLocalBranches );
+#   BranchString holds a one-line-string of branches, however, be
+#   careful, as this string has no delimiters to parse. Nevertheless
+#   it can still be used for comparison, i.e. testing if a string is
+#   a substring of this BranchString.
+#
+function getLocalBranches()
+{
+    for BRANCH in $( git branch | tr -d '\*|[:blank:]' ); do
+        echo $BRANCH;
+    done
+}
+
+
+#####################################################################
+# Function getCurrentBranch
+#
+# Return a string containing the name of the current branch.
+#
+function getCurrentBranch()
+{
+    echo $( git branch | grep \* | tr -d '\*|[:blank:]' );
+}
+
+
+#####################################################################
+# Function updateRepo
+#
+# Accept branch name of local repo. Checkout into the branch and pull
+# updates. If no argument is passed, assume we're already in correct
+# branch (no need to check out), but branch name is still required
+# to pull updates for this branch only, not all the branches.
+#
+function updateRepo()
+{
+    local BRANCH="";
+    local LOG="/dev/null 2>&1";
+
+#    [ -z "$1" ] && \
+#        BRANCH=$( git branch | grep \* | tr -d '\*|[:blank:]' ) || \
+#        BRANCH=$1;
+
+    [ ! -z "$1" ] && \
+        LOG=$1;
+
+#    git checkout -f $BRANCH > /dev/null 2>&1;
+    git pull origin $BRANCH > $LOG;
+}
+
+
+#####################################################################
+# Function updateRepo
+#
+# Rewind repository N commits back.
+#
+function rewindRepo()
+{
+    if [[ $? -gt 1  && $1 -gt 0 ]]; then
+        git reset --hard HEAD~$1;
+    fi
+}
