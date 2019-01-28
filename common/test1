@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+
+CLONE="umkoin";
+MAINSTREAM="bitcoin";
+BRANCH="master";
+
+
+
+function getLocalBranches()
+{
+    for b in $( git branch | tr -d '\*|[:blank:]' ); do
+        echo $b;
+    done
+}
