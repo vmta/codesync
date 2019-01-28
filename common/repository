@@ -35,10 +35,10 @@ function getHEAD()
 #####################################################################
 # Function getLastSyncedCommit
 #
-# Retrieve array of commits that follow certain naming/subject policy
-# on the cloned repository side, and return the string representation
-# of the mainstream repository's commit SHA1 the cloned repository is
-# synced to.
+# Retrieve commits that follow certain naming/subject policy on the
+# cloned repository side, and return the string representation of the
+# mainstream repository's commit SHA1 the cloned repository is synced
+# to.
 #
 # Example:
 # Cloned repository follows the policy to set subject something like:
@@ -46,10 +46,9 @@ function getHEAD()
 # Sync to mainstream commit 0a0b2ea11fde7becbdd1c04205336c3a39bffbc0
 # (Mon, 7 Jan 2019 14:39:40 +0100)
 # --
-# Then, to retrieve all SHA1 of the mainstream it is neccessary to
-# loop through all grep'ed commits, get substring in 5th position and
-# put into an array. Final step will be to return the first element
-# from the array.
+# Then, to retrieve SHA1 of the mainstream it is neccessary to grep
+# certain commits, get substring in 5th position return the first
+# matched element and break the loop.
 #
 # NOTE: both REGEX and positional element could be manually adjusted,
 #       but the function would require certain modification.
@@ -59,17 +58,12 @@ function getHEAD()
 #
 function getLastSyncedCommit()
 {
-    local arr=();
-
     for COMMIT in $( git log --format='%s' | \
-                     grep 'Sync to mainstream' | \
+                     grep 'Sync to mainstream commit' | \
                      awk '{ print $5 }' ); do
-        arr+=( $COMMIT );
+        echo $COMMIT;
+        break;
     done
-
-    if [ ${#arr[@]} -gt 0 ]; then
-        echo ${arr[0]};
-    fi
 }
 
 

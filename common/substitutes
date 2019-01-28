@@ -1,0 +1,39 @@
+# Set forth the umkoin...
+s/БІТКО/УМКО/g
+s/Бітко/Умко/g
+s/бітко/умко/g
+s/БИТКО/УМКО/g
+s/Битко/Умко/g
+s/битко/умко/g
+s/BITCOIN/UMKOIN/g
+s/Bitcoin/Umkoin/g
+s/bitcoin/umkoin/g
+s/bitcon/umkon/g
+s/8332/6332/g
+s/8333/6333/g
+s/18333/16333/g
+s/BTC/UMK/g
+s/btc/umk/g
+s/2009, COPYRIGHT_YEAR/2017, COPYRIGHT_YEAR/g
+s/URL_WEBSITE = \"<https:\/\/bitcoincore/URL_WEBSITE = \"<http:\/\/umkoin/g
+s/COPYRIGHT_STR \"2009-\" STRINGIZE/COPYRIGHT_STR \"2017-\" STRINGIZE/g
+s/5wyqrzbvrdsumnok/klfchu53kxun6zx5/g
+s/arg(2009)/arg(2017)/g
+# Set back the bitcoin...
+s/en.umkoin.it/en.bitcoin.it/g
+s/Umkoin Core devel/Bitcoin Core devel/g
+s/umkoin-core\//bitcoin-core\//g
+s/umkoincore.org/bitcoincore.org/g
+s/umkoin.stackexchange/bitcoin.stackexchange/g
+s/umkointalk.org/bitcointalk.org/g
+s/umkoin\/bips\/blob\//bitcoin\/bips\/blob\//g
+s/umkoin\/umkoin\/blob\//bitcoin\/bitcoin\/blob\//g
+s/umkoin\/umkoin\/issues\//bitcoin\/bitcoin\/issues\//g
+s/umkoin\/umkoin\/pull\//bitcoin\/bitcoin\/pull\//g
+# Set forth the umkoin in special cases...
+s/bitcoincore.org\/cfields/umkoin.org\/cfields/g
+s/github.com\/bitcoin-core\/gitian.sigs/github.com\/umkoin\/gitian.sigs/g
+s/github.com\/bitcoin-core\/umkoin/github.com\/umkoin\/umkoin/g
+# Genesis block takeover
+s/04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38c4f35504e51ec112de5c384df7ba0b8d578a4c702b6bf11d5f/04880766d2f2a4f8e8a2ca8ef5f6baf014f2ac460acc69604df1af697ec9cd9d01548a7d6015e0cabfcbc160316143d9aae4a17c944f611b8daf18fb1492935d67/g
+s/04 67 8a fd b0/04 88 07 66 d2/g

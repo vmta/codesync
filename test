@@ -1,79 +1,46 @@
 #!/usr/bin/env bash
 
 
+# Stage 1 - get diff file
 
-source common/repository;
-source common/test1;
+DIFFFILE="$( pwd )/git.diffs";
+DIFFTMP="$( pwd )/diff.tmp";
+FILES=();
+SUBST="$( pwd )/common/subst";
 
-
-FLAG_UPDATE=0;
-
-
-# 1. find out if we need to update
-# 2. find out if we need to get patches
-# 3. run word processor to change
-# 4. get patches
-
-
-
-if [[ $# -gt 0 ]]; then
-
-    while getopts "u" opt; do
-
-        case $opt in
-
-            u)  # Fetch and merge updates
-                FLAG_UPDATE=1;
-                ;;
-
-        esac
-
-    done
-
-    # From CLONE, retrieve SHA1 of the last synced commit
-    pushd $CLONE;
-    if [ $FLAG_UPDATE -eq 1 ]; then
-        updateRepo;
-    fi
-    LAST_SYNCED_COMMIT=$( getLastSyncedCommit );
-    popd;
-
-    # From MAINSTREAM, retrieve SHA1 of the first unsynced commit
-    # but first, need to fetch and merge and then get the first unsynced
-    # then rewind to the previous state.
-    pushd $MAINSTREAM;
-    CURRENT_HEAD=$( getHEAD );
-    git fetch origin $BRANCH;
-    git merge FETCH_HEAD;
-    FIRST_UNSYNCED_COMMIT=$( getFirstUnsyncedCommit $LAST_SYNCED_COMMIT );
-    git reset --hard $CURRENT_HEAD;
-    popd;
-
-    # check that last synced and first unsynced differ,
-    # even simpler, the first unsynced would be empty if
-    # repos are in sync
-
-    if [ ! -z $FIRST_UNSYNCED_COMMIT ]; then
+pushd umkoin;
+git pull origin master;
+for SHA1 in $( git log --format='%s' | grep "Sync to mainstream commit" | awk '{ print $5 }' ); do
+    break;
+done
+popd;
 
 
-        pushd $MAINSTREAM;
+pushd bitcoin;
+git pull origin master;
+# -=or=-
+# git fetch;
+# git merge;
+
+git diff $SHA1 HEAD | sed -f $SUBST > $DIFFFILE; # auto apply substitions
+
+## set stage 1.1 = get per-file-diffs with auto substitution
+for FILE in $( git diff --name-only $SHA1 HEAD ); do
+    FILES+=( $FILE );
+
+    [ ! -d $DIFFTMP ] && mkdir $DIFFTMP;
+    DEST="$DIFFTMP/$( echo ${FILE##*/} )";
+#
+    git diff "../umkoin/$FILE" $FILE | sed -f $SUBST > $DEST;
+#    git diff "../umkoin/$FILE" $FILE > $DEST;
+
+done;
+popd;
 
 
-            git fetch origin $BRANCH;
-            git merge $FIRST_UNSYNCED_COMMIT;
-
-
-        popd;
-
-
-    fi
-
-else
-
-    # display help and usage info and exit
-    echo "Will echo help and usage";
-
-fi
+printf "Diff file:\t%s\n" $DIFFFILE;
+printf "Files to patch:\t%d\n" ${#FILES[@]};
+printf "              :\t%s\n" ${FILES[@]};
 
 
 

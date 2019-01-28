@@ -1,13 +1,10 @@
 #!/usr/bin/env bash
 
 #####################################################################
-# The purpose of this script is to get a set of diffs between repos
-# which are processed and adopted to the needs of a cloned repo.
-#
-# Author: Igor Gunia <vmta@yahoo.com>
-# Date:   2018-09-24
-# Ver.:   1.0
-#####################################################################
+# Filename: getDIFF
+# Author:   vmta
+# Date:     2018-09-24
+# Version:  1.0
 
 
 #####################################################################
@@ -15,8 +12,6 @@
 #####################################################################
 #
 # GLOBAL DEFAULTS
-#
-source common/variables;
 #
 DEFAULT_BRANCH="master";
 DEFAULT_PATCH_DIR="$( pwd )/diffs";
@@ -36,11 +31,31 @@ FILENAMES_LIST="$( pwd )/filenames";
 #####################################################################
 # REDEFINE BUILTIN COMMANDS (SILENCER)
 #####################################################################
-source common/repository;
-#pushd() { command pushd "$@" > /dev/null; }
-#popd() { command popd "$@" > /dev/null; }
+pushd() { command pushd "$@" > /dev/null; }
+popd() { command popd "$@" > /dev/null; }
 #####################################################################
 
+
+repoReset()
+{
+    local REPO=$1;
+    local BRANCH=$2;
+    local LOG="/dev/null";
+    if [[ $# -eq 3 ]]; then
+        LOG=$3;
+    fi
+
+    pushd $REPO;
+    git checkout -f $BRANCH;
+    echo -n "Resetting $REPO/$BRANCH...";
+    git reset --hard HEAD~1 > $LOG;
+    if [ $? ]; then
+        echo "done";
+    else
+        echo "failed";
+    fi
+    popd;
+}
 
 repoPull()
 {
@@ -53,13 +68,15 @@ repoPull()
 
     pushd $REPO;
     git checkout -f $BRANCH;
-
     echo -n "Pulling $REPO/$BRANCH...";
     git pull origin $BRANCH > $LOG;
-
+    if [ $? ]; then
+        echo "done";
+    else
+        echo "failed";
+    fi
     popd;
 }
-
 
 doCleanup()
 {
@@ -78,42 +95,22 @@ doCleanup()
 
 doGetList()
 {
-    local REPOS=($REPOSITORY $MAINSTREAM);
-
     # Set git pull log
-    #gitlog="$( pwd )/git_pull.log";
-
-    # Rewind repositories REWIND_N commits back
-    # just to be "sure"
-    if [ $REWIND_N -gt 0 ]; then
-        for REPO in ${REPOS[@]}; do
-            pushd $REPO;
-                git checkout -f $BRANCH;
-                rewindRepo $REWIND_N;
-                [ "$REPO" == "$MAINSTREAM" ] && \
-                    LOG="$( pwd )/git_pull.log" || \
-                    LOG="/dev/null 2>&1";
-                updateRepo $LOG;
-            popd;
-        done
-    fi
+    gitlog="$( pwd )/git_pull.log";
 
     # Ensure repo is clean and synced
-#    repoPull $REPOSITORY $BRANCH;
+    repoReset $REPOSITORY $BRANCH;
+    repoPull $REPOSITORY $BRANCH;
 
     # Pull git updates for mainstream
-#    repoPull $MAINSTREAM $BRANCH $gitlog;
-
-
-
+    repoReset $MAINSTREAM $BRANCH;
+    repoPull $MAINSTREAM $BRANCH $gitlog;
 
     # Check if gitlog is not empty
-    if [ -f $LOG ]; then
-#    if [ -f $gitlog ]; then
+    if [ -f $gitlog ]; then
 
         echo -n "Creating filename-list-file...";
-        sed -n 's/ //g; /|/p;' $LOG | cut -d'|' -f1 > $FILENAMES_LIST;
-#        sed -n 's/ //g; /|/p;' $gitlog | cut -d'|' -f1 > $FILENAMES_LIST;
+        sed -n 's/ //g; /|/p;' $gitlog | cut -d'|' -f1 > $FILENAMES_LIST;
         if [ -s $FILENAMES_LIST ]; then
             echo "done";
         else
@@ -197,7 +194,7 @@ if [[ $# -gt 0 ]]; then
                 fi
                 ;;
 
-            default) # Option is omitted, display usage info
+            default) # Option is omitted, displa usage info
                 doHelp;
                 ;;
 
@@ -338,8 +335,7 @@ done < "$FILENAMES_LIST";
 #####
 # Cleanup temporary files
 #
-doCleanup $LOG;
-#doCleanup $gitlog;
+doCleanup $gitlog;
 doCleanup $FILENAMES_LIST;
 doCleanup $PATCH_DIR;
 
