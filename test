@@ -3,35 +3,52 @@
 
 # Stage 1 - get diff file
 
-DIFFFILE="$( pwd )/git.diffs";
-DIFFTMP="$( pwd )/diff.tmp";
-FILES=();
-SUBST="$( pwd )/common/subst";
+DIR=$( pwd );
 
-pushd umkoin;
+CLONE="umkoin";
+MAINSTREAM="bitcoin";
+
+#DIFFFILE="$( pwd )/git.diffs";
+DIFFFILE="$DIR/git.diffs";
+#DIFFTMP="$( pwd )/diff.tmp";
+DIFFTMP="$DIR/diff.tmp";
+FILES=();
+#SUBST="$( pwd )/common/substitutes";
+SUBST="$DIR/common/substitutes";
+
+pushd $DIR/$CLONE;
 git pull origin master;
-for SHA1 in $( git log --format='%s' | grep "Sync to mainstream commit" | awk '{ print $5 }' ); do
+for SYNCED_COMMIT in $( git log --format='%s' | grep "Sync to mainstream commit" | awk '{ print $5 }' ); do
     break;
 done
 popd;
 
 
-pushd bitcoin;
+pushd $DIR/$MAINSTREAM;
 git pull origin master;
 # -=or=-
 # git fetch;
 # git merge;
 
-git diff $SHA1 HEAD | sed -f $SUBST > $DIFFFILE; # auto apply substitions
+git diff $SYNCED_COMMIT HEAD | sed -f $SUBST > $DIFFFILE; # auto apply substitions
 
 ## set stage 1.1 = get per-file-diffs with auto substitution
-for FILE in $( git diff --name-only $SHA1 HEAD ); do
-    FILES+=( $FILE );
+for FILE in $( git diff --name-only $SYNCED_COMMIT HEAD ); do
+    FILES+=( $( echo $FILE | sed 's/bitcoin/umkoin/g' ) );
 
     [ ! -d $DIFFTMP ] && mkdir $DIFFTMP;
-    DEST="$DIFFTMP/$( echo ${FILE##*/} )";
+##    DEST="$DIFFTMP/$( echo ${FILE##*/} )";
+    DEST="$DIFFTMP/$( echo ${FILES[-1]##*/} )";
+echo $DEST;
 #
-    git diff "../umkoin/$FILE" $FILE | sed -f $SUBST > $DEST;
+    if [ ! -f "$DIR/$CLONE/${FILES[-1]}" ]; then
+        [ ! -d "$( dirname $DIR/$CLONE/${FILES[-1]} )" ] && mkdir "$( dirname $DIR/$CLONE/${FILES[-1]} )";
+        touch $DIR/$CLONE/$FILES[-1];
+    fi
+
+#    git diff "../umkoin/$FILE" $FILE | sed -f $SUBST > $DEST;
+###    git diff "$DIR/$CLONE/$FILE" $FILE | sed -f $SUBST > $DEST;
+echo "$DIR/$CLONE/${FILES[-1]}";
 #    git diff "../umkoin/$FILE" $FILE > $DEST;
 
 done;
@@ -40,7 +57,7 @@ popd;
 
 printf "Diff file:\t%s\n" $DIFFFILE;
 printf "Files to patch:\t%d\n" ${#FILES[@]};
-printf "              :\t%s\n" ${FILES[@]};
+#printf "              :\t%s\n" ${FILES[@]};
 
 
 
