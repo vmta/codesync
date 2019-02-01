@@ -8,13 +8,12 @@ DIR=$( pwd );
 CLONE="umkoin";
 MAINSTREAM="bitcoin";
 
-#DIFFFILE="$( pwd )/git.diffs";
 DIFFFILE="$DIR/git.diffs";
-#DIFFTMP="$( pwd )/diff.tmp";
 DIFFTMP="$DIR/diff.tmp";
 FILES=();
-#SUBST="$( pwd )/common/substitutes";
 SUBST="$DIR/common/substitutes";
+
+
 
 pushd $DIR/$CLONE;
 git pull origin master;
@@ -22,6 +21,7 @@ for SYNCED_COMMIT in $( git log --format='%s' | grep "Sync to mainstream commit"
     break;
 done
 popd;
+
 
 
 pushd $DIR/$MAINSTREAM;

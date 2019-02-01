@@ -153,24 +153,23 @@ function getCurrentBranch()
 #####################################################################
 # Function updateRepo
 #
-# Accept branch name of local repo. Checkout into the branch and pull
-# updates. If no argument is passed, assume we're already in correct
-# branch (no need to check out), but branch name is still required
-# to pull updates for this branch only, not all the branches.
+# Two optional argument could be provided. A branch name of local
+# repo and log file path/name. If second arg is not provided, send
+# all output into /dev/null. If no arguments provided, then assume
+# an update to current branch is requested.
 #
 function updateRepo()
 {
     local BRANCH="";
     local LOG="/dev/null 2>&1";
 
-#    [ -z "$1" ] && \
-#        BRANCH=$( git branch | grep \* | tr -d '\*|[:blank:]' ) || \
-#        BRANCH=$1;
+    [ -z "$1" ] && \
+        BRANCH=$( git branch | grep \* | tr -d '\*|[:blank:]' ) || \
+        BRANCH=$1;
 
-    [ ! -z "$1" ] && \
-        LOG=$1;
+    [ ! -z "$2" ] && \
+        LOG=$2;
 
-#    git checkout -f $BRANCH > /dev/null 2>&1;
     git pull origin $BRANCH > $LOG;
 }
 
