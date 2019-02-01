@@ -89,7 +89,8 @@ function getUnsyncedCommits()
 {
     local LAST_SYNCED=$1;
 
-    for COMMIT in $( git log --format='%H' $LAST_SYNCED..HEAD ); do
+#    for COMMIT in $( git log --format='%H' $LAST_SYNCED..HEAD ); do
+    for COMMIT in $( git rev-list --first-parent $LAST_SYNCED..HEAD ); do
         echo $COMMIT;
     done
 }
