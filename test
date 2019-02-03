@@ -1,36 +1,165 @@
 #!/usr/bin/env bash
 
+#####################################################################
+# The purpose of this script is to get diffs between the clone and
+# the mainstream repositories.
+#
+# The script accepts arguments:
+#
+#
+#
+#
+# Author: Igor Gunia <vmta@yahoo.com>
+# Date:   2019-02-02
+# Ver.:   0.1
+#####################################################################
 
-# Stage 1 - get diff file
 
+#####################################################################
+# VARIABLES
+#####################################################################
+#
+source common/variables;
+#
+VERSION="0.1";
+#
 DIR=$( pwd );
-
+#
 CLONE="umkoin";
 MAINSTREAM="bitcoin";
-
+#
+ONE_FILE_DIFF=1;
 DIFFFILE="$DIR/git.diffs";
 DIFFTMP="$DIR/diff.tmp";
 FILES=();
 SUBST="$DIR/common/substitutes";
+#####################################################################
+
+
+#####################################################################
+# REDEFINE BUILTIN COMMANDS (SILENCER)
+#####################################################################
+source common/silencer;
+source common/repository;
+#####################################################################
+
+
+#####################################################################
+# Function displayHelp
+#
+# In case the script is called with no arguments, or arguments are
+# omitted, display short message with info on script version,
+# acceptable arguments and an example.
+#
+function displayHelp()
+{
+    local STRING="Script $( basename $0 ) version $VERSION\n
+                 Usage:\n
+                   $( basename $0 ) [b:h]\n\n
+                 Options:\n
+                   -b \t Requires argument, a branch name to set\
+                         tracking on, several branches can be\
+                         specified delimited with '|' provided that\
+                         they are surrounded by quotes\n
+                   -h \t Requires no argument, display help info and\
+                         exit\n
+                 Example:\n
+                   $( basename $0 ) -b '0.17|0.16' -r\
+                   https://github.com/umkoin/umkoin.git\
+                   -r https://github.com/bitcoin/bitcoin.git\n\n
+                 On completion, there shall be both repositories\
+                 cloned locally with branches 0.17 and 0.16 set to be\
+                 tracked respectfully in each of the cloned\
+                 repositories, assuming the remotes have these\
+                 branches.\n";
+
+    echo -e $STRING;
+
+    exit 1;
+}
+#####################################################################
+
+
+#####################################################################
+# Check if script is called with arguments.
+# Cycle through them.
+if [[ $# -gt 0 ]]; then
+
+    while getopts "b:hr:x" opt; do
+        case $opt in
+
+            b)  # Set branches to track (both repos)
+                if [ ! -z "$OPTARG" ]; then
+                    BRANCH=$OPTARG;
+                fi
+                ;;
+
+            h)  # Display help and usage info and exit
+                displayHelp;
+                ;;
+
+            default) # Option is omitted
+                     # Display help and usage info and exit
+                displayHelp;
+                ;;
+
+        esac
+    done
+
+    # PERFORM SOME ACTION
+
+    # Check if CLONE repo local folder is accessible or exit.
+    # Enter the CLONE repo local folder.
+    # Checkout into BRANCH.
+    # Get LAST_SYNCED mainstream commit SHA1.
+    [ -d "$DIR/$CLONE" ] || exit 1;
+    pushd $DIR/$CLONE;
+    git checkout -f $BRANCH;
+    LAST_SYNCED=$( getLastSyncedCommit );
+    popd;
+
+    # Check if MAINSTREAM repo local folder is accessible or exit.
+    # Enter the MAINSTREAM repo local folder.
+    # Checkout into BRANCH.
+    # Pull updates from remote server.
+    # Check if one-file-diff is requested.
+    #   (true)   get diff between the last synced commit and current
+    #            HEAD run through substitution filter and prepare
+    #            one-file-patch.
+    #   (false)  get list of changed files between the last synced
+    #            commit and current HEAD, auto-rename if needed, and
+    #            get per-file-patches.
+    [ -d "$DIR/$MAINSTREAM" ] || exit 2;
+    pushd $DIR/$MAINSTREAM;
+    git checkout -f $BRANCH;
+    git pull origin $BRANCH;
+    if [ $ONE_FILE_DIFF -eq 1 ]; then
+        git diff $LAST_SYNCED HEAD | sed -f $SUBST > $DIFFFILE; # auto-apply substitutions
+    else
+        
+    fi
+    popd;
+
+else
+    displayHelp;
+fi
 
 
 
-pushd $DIR/$CLONE;
-git pull origin master;
-for SYNCED_COMMIT in $( git log --format='%s' | grep "Sync to mainstream commit" | awk '{ print $5 }' ); do
-    break;
-done
-popd;
+# Stage 1 - get diff file
+
+#pushd $DIR/$CLONE;
+#git pull origin master;
+#for SYNCED_COMMIT in $( git log --format='%s' | grep "Sync to mainstream commit" | awk '{ print $5 }' ); do
+#    break;
+#done
+#popd;
 
 
+#pushd $DIR/$MAINSTREAM;
+#git pull origin master;
 
-pushd $DIR/$MAINSTREAM;
-git pull origin master;
-# -=or=-
-# git fetch;
-# git merge;
-
-git diff $SYNCED_COMMIT HEAD | sed -f $SUBST > $DIFFFILE; # auto apply substitions
+#git diff $SYNCED_COMMIT HEAD | sed -f $SUBST > $DIFFFILE; # auto apply substitions
 
 ## set stage 1.1 = get per-file-diffs with auto substitution
 for FILE in $( git diff --name-only $SYNCED_COMMIT HEAD ); do

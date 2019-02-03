@@ -3,7 +3,12 @@
 ######################################################################
 
 BRANCH="master";
+
+CLONE="umkoin";
+MAINSTREAM="bitcoin";
+
 FLAG_DEBUG=0;
 FLAG_UPDATE=0;
+
 RESET_TRACKING=0;
 REWIND_N=0;
