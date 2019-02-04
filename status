@@ -7,7 +7,7 @@
 # after this pull.
 #
 # The script accepts arguments:
-# -b - get branch name to compare repos (default to master)
+# -b - get branch name to compare repos (defaults to master)
 # -c - get cloned repository name (should be locally accessible)
 # -h - display help and usage info and exit
 # -m - get mainstream repository name (should be locally accessible)
@@ -50,7 +50,7 @@ function displayHelp()
 {
     local STRING="Script $( basename $0 ) version $VERSION\n
                  Usage:\n
-                   $( basename $0 ) [b:c:hm:uv:]\n\n
+                   $( basename $0 ) [b:c:hm:uv]\n\n
                  Options:\n
                    -b \t Requires branch name. Defaults to\
                          \"master\".\n
@@ -68,7 +68,7 @@ function displayHelp()
                          status.\n
                    -v \t Requires no argument, when specified,\
                          produces broader logs.\n\n
-                 Example:\n
+                 Example:\n\n
                    $( basename $0 ) -u\
                                     -c umkoin\
                                     -m bitcoin\

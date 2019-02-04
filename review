@@ -1,0 +1,286 @@
+#!/usr/bin/env bash
+
+#####################################################################
+# Filename: reviewDIFF
+# Author:   vmta
+# Date:     2018-09-24
+# Version:  1.0
+#####################################################################
+
+
+#####################################################################
+# VARIABLES
+#####################################################################
+#
+VERSION="0.1";
+#
+DIR="$( cd $( dirname ${BASH_SOURCE[0]} ) > /dev/null 2>&1 && pwd )";
+#
+source $DIR/common/variables;
+#
+PATCH_DIR="$DIR/git.diffs";
+PATCH_FILE="$DIR/git.diff";
+#####################################################################
+
+
+#####
+# Check if given PATH is empty.
+isEmpty()
+{
+    if [ -d $1 ]; then
+        [ ! -z "$( ls -A $1 )" ] && \
+            echo 1; # Multi-file patch mode
+                    # Patches are found
+    elif [ -f $1 ]; then
+        [ -s $1 ] && \
+            echo 1; # Single-file patch mode
+                    # Patches are found
+    else
+        echo 0; # Patches are not found
+    fi
+}
+
+
+#####
+# Read the patches
+doReview()
+{
+
+    if [ $FLAG_READALL -gt 0 ]; then
+
+        # FLAG_READALL is set to 1 via option -r
+        #
+
+        # Cycle through all patch files in a PATCH_DIR
+        #
+        if [ -d $PATCH_DIR ]; then
+            for file in $( ls -A $PATCH_DIR ); do
+
+                # Review, edit and save if necessary
+                #
+                $EDITOR $PATCH_DIR/$file;
+            done
+        elif [ -f $PATCH_FILE ]; then
+            $EDITOR $PATCH_FILE;
+        fi
+
+    else
+
+        # FLAG_READALL is set to default value of 0
+        #
+
+        # Set "stop" words to look for in a patch files
+        #
+        declare -a stop_word=("bitcoin" "chainparam" "configure" "COPYRIGHT" "klfchu53kxun6zx5" "splash");
+
+        filenames=();
+
+        # Cycle through "stop" words
+        #
+        for word in "${stop_word[@]}"
+        do
+
+            # Get filenames
+            #
+            if [ $word == "bitcoin" ]; then
+
+                # Get only filename where "stop" word "bitcoin" is present more than twice
+                #
+##                filenames+=( $( grep -H -c $word $PATCH_DIR/* | grep -v :2 | cut -d':' -f1 ) );
+                filename=$( grep -H -c $word $PATCH_DIR/* | grep -v :2 | cut -d':' -f1 );
+            else
+
+                # Get filename where "stop" words other than "bitcoin" are present at least once
+                #
+##                filenames+=( $( grep -H -c $word $PATCH_DIR/* | grep -v :0 | cut -d':' -f1 ) );
+                filename=$( grep -H -c $word $PATCH_DIR/* | grep -v :0 | cut -d':' -f1 );
+            fi
+
+            [[ $filename != "" ]] && filenames+=( $filename );
+#            [[ $filename != "" ]] && $EDITOR $filename;
+
+        done
+
+        # now cycle through the filenames and read them
+        [[ ${#filenames[@]} -gt 0 ]] && $EDITOR ${filenames[@]};
+
+    fi
+
+}
+
+
+doHelp()
+{
+
+    local STRING="Usage:\n
+                 $( basename $0 ) [b:e:hp:r:v]\n\n
+                 Options:\n
+                 -b \t Requires branch name as an argument\n
+                    \t (default: $DEFAULT_BRANCH)\n
+                 -e \t Requires argument \"remote\" and sets an editor\n
+                    \t to nano instead of the default gedit\n
+                 -h \t Display this help and exit \n
+                 -p \t Requires argument. Sets alternative path to patches\n
+                    \t (default: $DEFAULT_PATCH_DIR$DEFAULT_BRANCH)\n
+                 -r \t Requires argument \"all\" and displays all\n
+                    \t patches, regardless of stop words\n
+                 -v \t Requires no argument, when specified,\
+                       produces broader logs.\n\n";
+
+    echo -e $STRING;
+
+    exit 0;
+
+}
+
+
+#####
+#
+#
+if [ $# -gt 0 ]; then
+
+    # Cycle through options
+    # -b requires an argument (branch name, defaults to master)
+    # -e requires an argument (remote)
+    # -f requires an argument (FILE)
+    # -h no arguments required, display usage info
+    # -p requires an argument (PATH)
+    # -r requires an argument (all)
+    # -v extra info
+    while getopts "b:e:f:hp:r:v" opt; do
+
+        case $opt in
+
+            b)  # Set branch name
+                if [ ! -z "$OPTARG" ]; then
+                    BRANCH=$OPTARG;
+                fi
+                ;;
+
+            e)  # Set editor to nano if 'remote' is specified
+                if [ "$OPTARG" == "remote" ]; then
+                    EDITOR="/bin/nano";
+                fi
+                ;;
+
+            f)  # Alternative path to patch-file
+                if [ -f $OPTARG ]; then
+                    PATCH_FILE=$OPTARG;
+                else
+                    echo "$OPTARG is not a valid file";
+                    exit 1;
+                fi
+                ;;
+
+            h)  # Run help function and exit
+                doHelp;
+                ;;
+
+            p)  # Alternative path to patches
+                if [ -d $OPTARG ]; then
+                    PATCH_DIR=$OPTARG;
+                else
+                    echo "$OPTARG is not a valid path, will try default path for patches";
+                fi
+                ;;
+
+            r)  # Define if all patch files should be reviewed
+                if [ "$OPTARG" == "all" ]; then
+                    FLAG_READALL=1;
+                fi
+                ;;
+
+            v)  # Set DEBUG
+                ((FLAG_DEBUG++));
+                ;;
+
+            default) # Option is omitted, display usage info
+                doHelp;
+                ;;
+
+        esac
+
+    done
+
+    # If no branch argument was passed to script, use default branch
+    if [ -z "$BRANCH" ]; then
+
+        BRANCH=$DEFAULT_BRANCH;
+
+        # If quiet mode is OFF (the default), inform that the
+        # default value will be used for branch
+        [ $FLAG_DEBUG -eq 1 ] && echo "Setting default BRANCH to $BRANCH";
+
+    fi
+
+    # If no editor argument was passed to script, use default editor
+    if [ -z "$EDITOR" ]; then
+
+        EDITOR=$DEFAULT_EDITOR;
+
+        # If quiet mode is OFF (the default), inform that the
+        # default value will be used for editor
+        [ $FLAG_DEBUG -eq 1 ] && echo "Setting default EDITOR to $EDITOR";
+
+    fi
+
+    # If no patch_dir argument was passed to script, use default patch_dir
+    if [ -z "$PATCH_DIR" ]; then
+
+        PATCH_DIR=$DEFAULT_PATCH_DIR$BRANCH;
+
+        # If quiet mode is OFF (the default), inform that the
+        # default value will be used for patch_dir
+        [ $FLAG_DEBUG -eq 1 ] && echo "Setting default PATCH_DIR to $PATCH_DIR";
+
+        # Check if patch_dir is valid path, or inform of the error and exit
+        if [ ! -d $PATCH_DIR ]; then
+
+            echo "$PATCH_DIR is not a valid default path for patches, exiting";
+#            exit 1;
+
+        fi
+
+    fi
+
+    # If no patch_file argument was passed to script, use default patch_file
+    if [ -z "$PATCH_FILE" ]; then
+
+        PATCH_FILE=$DEFAULT_PATCH_FILE$BRANCH;
+
+        # If quiet mode is OFF (the default)< inform that the
+        # default value will be used for patch_file
+        [ $FLAG_DEBUG -eq 1 ] && echo "Setting default PATCH_FILE to $PATCH_FILE";
+
+        # Check if patch_file is valid file, or inform of the error and exit
+        if [ ! -f $PATCH_FILE ]; then
+
+            echo "$PATCH_FILE is not a valid default patch file, exiting";
+#            exit 1;
+
+        fi
+
+    fi
+
+fi
+
+
+#####
+# Check if PATCH_DIR exists and is not empty and do patch review.
+#
+#if [ -d $PATCH_DIR ] && [ $( isEmpty $PATCH_DIR ) -gt 0 ]; then
+#
+# No need to check if the patch_dir is a valid path,
+# instead check if it is not empty
+if [[ $( isEmpty $PATCH_DIR ) -gt 0 || $( isEmpty $PATCH_FILE ) -gt 0 ]]; then
+
+    doReview;
+
+else
+
+    echo "There are no patches.";
+
+fi
+
+
+exit $?

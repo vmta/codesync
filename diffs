@@ -1,351 +1,260 @@
 #!/usr/bin/env bash
 
 #####################################################################
-# Filename: getDIFF
-# Author:   vmta
-# Date:     2018-09-24
-# Version:  1.0
+# The purpose of this script is to get diffs between the clone and
+# the mainstream repositories.
+#
+# The script accepts arguments:
+# -b - get branch name to compare repos (defaults to master)
+# -h - display help and usage info and exit
+# -i - enable user interaction after patches are created
+# -p - switch single/multi file patch creation mode (default to
+#      single file mode)
+# -v - set verbosity level
+#
+# If no arguments specified, the script will display help and usage
+# information with immediate execution abortion.
+#
+# Author: Igor Gunia <vmta@yahoo.com>
+# Date:   2019-02-02
+# Ver.:   0.1
+#####################################################################
 
 
 #####################################################################
 # VARIABLES
 #####################################################################
 #
-# GLOBAL DEFAULTS
+VERSION="0.1";
 #
-DEFAULT_BRANCH="master";
-DEFAULT_PATCH_DIR="$( pwd )/diffs";
-DEFAULT_MAINSTREAM="bitcoin";
-DEFAULT_REPOSITORY="umkoin";
+DIR="$( cd $( dirname ${BASH_SOURCE[0]} ) > /dev/null 2>&1 && pwd )";
 #
-# GLOBAL
+source $DIR/common/variables;
 #
-BRANCH="";
-PATCH_DIR="";
-MAINSTREAM="";
-REPOSITORY="";
-FILENAMES_LIST="$( pwd )/filenames";
+PATCH_DIR="$DIR/git.diffs";
+PATCH_FILE="$DIR/git.diff";
+FILES=();
+SUBST="$DIR/common/substitutes";
 #####################################################################
 
 
 #####################################################################
 # REDEFINE BUILTIN COMMANDS (SILENCER)
 #####################################################################
-pushd() { command pushd "$@" > /dev/null; }
-popd() { command popd "$@" > /dev/null; }
+source $DIR/common/silencer;
+source $DIR/common/repository;
 #####################################################################
 
 
-repoReset()
+#####################################################################
+# Function displayHelp
+#
+# In case the script is called with no arguments, or arguments are
+# omitted, display short message with info on script version,
+# acceptable arguments and an example.
+#
+function displayHelp()
 {
-    local REPO=$1;
-    local BRANCH=$2;
-    local LOG="/dev/null";
-    if [[ $# -eq 3 ]]; then
-        LOG=$3;
-    fi
-
-    pushd $REPO;
-    git checkout -f $BRANCH;
-    echo -n "Resetting $REPO/$BRANCH...";
-    git reset --hard HEAD~1 > $LOG;
-    if [ $? ]; then
-        echo "done";
-    else
-        echo "failed";
-    fi
-    popd;
-}
-
-repoPull()
-{
-    local REPO=$1;
-    local BRANCH=$2;
-    local LOG="/dev/null";
-    if [[ $# -eq 3 ]]; then
-        LOG=$3;
-    fi
-
-    pushd $REPO;
-    git checkout -f $BRANCH;
-    echo -n "Pulling $REPO/$BRANCH...";
-    git pull origin $BRANCH > $LOG;
-    if [ $? ]; then
-        echo "done";
-    else
-        echo "failed";
-    fi
-    popd;
-}
-
-doCleanup()
-{
-    local FILE=$1;
-
-    if [ -f $FILE ]; then
-        echo -n "Removing $FILE...";
-        [ ! $( rm $FILE ) ] && echo "done" || echo "failed";
-    elif [ -d $FILE ]; then
-        if [ -z "$( ls -A $FILE )" ]; then
-            echo -n "Removing $FILE...";
-            [ ! $( rmdir $FILE ) ] && echo "done" || echo "failed";
-        fi
-    fi
-}
-
-doGetList()
-{
-    # Set git pull log
-    gitlog="$( pwd )/git_pull.log";
-
-    # Ensure repo is clean and synced
-    repoReset $REPOSITORY $BRANCH;
-    repoPull $REPOSITORY $BRANCH;
-
-    # Pull git updates for mainstream
-    repoReset $MAINSTREAM $BRANCH;
-    repoPull $MAINSTREAM $BRANCH $gitlog;
-
-    # Check if gitlog is not empty
-    if [ -f $gitlog ]; then
-
-        echo -n "Creating filename-list-file...";
-        sed -n 's/ //g; /|/p;' $gitlog | cut -d'|' -f1 > $FILENAMES_LIST;
-        if [ -s $FILENAMES_LIST ]; then
-            echo "done";
-        else
-            echo "failed";
-            exit 1;
-        fi
-
-    fi
-}
-
-doHelp()
-{
-    local STRING="Usage:\
-                 $( basename $0 ) [b:hl:m:p:r:]\n\n
+    local STRING="Script $( basename $0 ) version $VERSION\n
+                 Usage:\n
+                   $( basename $0 ) [b:hip:v]\n\n
                  Options:\n
-                 -b \t Requires argument, a branch name (defaults\n
-                    \t to branch \"master\"; implies change of PATCH_DIR\n
-                    \t by appending the latter)\n
-                 -h \t Display this help and exit \n
-                 -l \t Requires argument, tests if it is a valid\n
-                    \t file path and sets FILENAMES_LIST\n
-                 -m \t Requires argument, tests if it is a valid\n
-                    \t dir path and sets MAINSTREAM\n
-                 -p \t Requires argument, tests if it is a valid\n
-                    \t dir path and sets PATCH_DIR\n
-                 -r \t Requires argument, tests if it is a valid\n
-                    \t dir path and sets REPOSITORY\n";
+                   -b \t Requires argument, a branch name to set\
+                         tracking on, several branches can be\
+                         specified delimited with '|' provided that\
+                         they are surrounded by quotes\n
+                   -h \t Requires no argument, display help info and\
+                         exit\n
+                   -i \t Requires no argument, when specified,\
+                         provides interaction after patches are\
+                         created\n
+                   -p \t Requires argument, either \"single\" or\
+                         \"multi\" to switch between single- and\
+                         multi-file patch creation mode\n
+                   -v \t Requires no argument, when specified,\
+                         produces broader logs.\n\n
+                 Example:\n\n
+                   $( basename $0 ) -b '0.17' -p 'single'\n\n
+                 On completion, there shall be a single-file patch\
+                 ready for final review/application on the cloned\
+                 repository branch '0.17'. Also note, that option\
+                 -p 'single' could effectively be omitted, since\
+                 it is the default behaviour, so the above command\
+                 may as well be: $( basename $0 ) -b '0.17'\n\n
+                   $( basename $0 ) -p 'multi'\n\n
+                 On completion, there shall be a folder, containing\
+                 per-file patches ready for final review/application\
+                 on the cloned repository branch 'master'. Even\
+                 though the option -b 'master' was not specified it
+                 is by default preset to work on the master branch,\
+                 if not set otherwise.\n\n";
 
     echo -e $STRING;
 
-    exit 0;
+    exit 1;
+}
+#####################################################################
+
+
+#####################################################################
+# Interaction is requested.
+# Provide some interactivity.
+function interact()
+{
+    read -p "Would you like to review patches? [Y/N] " QA;
+    if [[ "$QA" =~ ^[Yy]$ ]]; then
+        [ $ONE_FILE_DIFF -eq 0 ] && \
+            "$DIR/review" -r all -b $BRANCH -p $PATCH_DIR || \
+            "$DIR/review" -r all -b $BRANCH -f $PATCH_FILE;
+    else
+        read -p "Would you like to apply patches? [Y/N] " QA;
+        if [[ "$QA" =~ ^[Yy]$ ]]; then
+            ./sync -b $BRANCH;
+        else
+            read -p "Would you like to remove patches? [Y/N] " QA;
+            if [[ "$QA" =~ ^[Yy]$ ]]; then
+                [ $ONE_FILE_DIFF -eq 0 ] && \
+                    rm -fr $PATCH_DIR || \
+                    rm -f $PATCH_FILE;
+            fi
+        fi
+    fi
 }
 
 
+#####################################################################
+# Check if script is called with arguments.
+# Cycle through them.
 if [[ $# -gt 0 ]]; then
 
-    # Cycle through options
-    # -b requires an argument (branch name, defaults to master;
-    #    implies change of PATCH_DIR by appending the latter)
-    # -h no arguments required, display usage info
-    # -l requires an argument (logfilename)
-    # -m requires an argument (mainstream repository)
-    # -p requires an argument (patch dir)
-    # -r requires an argument (local repository)
-    #
-    while getopts "b:hl:m:p:r:" opt; do
-
+    while getopts "b:hip:v" opt; do
         case $opt in
 
-            b)  # Set branch name
-                if [ ! -z "$OPTARG" ]; then
+            b)  # Set branches to track (both repos)
+                [[ ! -z "$OPTARG" ]] && \
                     BRANCH=$OPTARG;
-                fi
                 ;;
 
-            h)  # Run help function and exit
-                doHelp;
+            h)  # Display help and usage info and exit
+                displayHelp;
                 ;;
 
-            l)
-                if [ -f $OPTARG ]; then
-                    FILENAMES_LIST=$OPTARG;
-                fi
+            i)  # Set interactivity
+                ((FLAG_INTERACT++));
                 ;;
 
-            m)
-                if [ -d $OPTARG ]; then
-                    MAINSTREAM=$OPTARG;
-                fi
+            p)  # Switch single/multi file patch creation mode
+                [[ ! -z "$OPTARG" && "$OPTARG" == "multi" ]] && \
+                    ONE_FILE_DIFF=0;
                 ;;
 
-            p)
-                if [ -d $OPTARG ]; then
-                    PATCH_DIR=$OPTARG;
-                fi
+            v)  # Set DEBUG
+                ((FLAG_DEBUG++));
                 ;;
 
-            r)
-                if [ -d $OPTARG ]; then
-                    REPOSITORY=$OPTARG;
-                fi
-                ;;
-
-            default) # Option is omitted, displa usage info
-                doHelp;
+            default) # Option is omitted
+                     # Display help and usage info and exit
+                displayHelp;
                 ;;
 
         esac
-
     done
 
-fi
+    # PERFORM SOME ACTION
 
-setDefaults()
-{
-    if [ -z $BRANCH ]; then
-        BRANCH=$DEFAULT_BRANCH;
-    fi
+    # Check if CLONE repo local folder is accessible or exit.
+    # Enter the CLONE repo local folder.
+    # Checkout into BRANCH.
+    # Get LAST_SYNCED mainstream commit SHA1.
+    [ -d "$DIR/$CLONE" ] || exit 1;
+    pushd $DIR/$CLONE;
+    git checkout -f $BRANCH;
+    LAST_SYNCED=$( getLastSyncedCommit );
+    popd;
 
-    if [ -z $PATCH_DIR ]; then
-        PATCH_DIR=$DEFAULT_PATCH_DIR$BRANCH;
+    # Check if MAINSTREAM repo local folder is accessible or exit.
+    # Enter the MAINSTREAM repo local folder.
+    # Checkout into BRANCH.
+    # Pull updates from remote server.
+    # Check if one-file-diff is requested.
+    #   (true)   get diff between the last synced commit and current
+    #            HEAD run through substitution filter and prepare
+    #            one-file-patch.
+    #   (false)  get list of changed files between the last synced
+    #            commit and current HEAD, auto-rename if needed, and
+    #            get per-file-patches.
+    [ -d "$DIR/$MAINSTREAM" ] || exit 2;
+    pushd $DIR/$MAINSTREAM;
+    git checkout -f $BRANCH;
+    git pull origin $BRANCH;
+    if [ $ONE_FILE_DIFF -eq 1 ]; then
+        # get diff between last synced commit and the HEAD,
+        # auto-apply substitutions and write to PATCH_FILE
+        git diff $LAST_SYNCED HEAD | sed -f $SUBST > $PATCH_FILE;
+        # check if created PATCH_FILE is empty and remove,
+        # otherwise leave it intact and report its name
+        [[ -f $PATCH_FILE && ! -s $PATCH_FILE ]] && \
+            rm $PATCH_FILE || \
+            printf "Diff file: %s will patch %d files.\n" \
+                    $PATCH_FILE \
+                    $( git diff --name-only $LAST_SYNCED HEAD | \
+                    wc -l );
+        [ $FLAG_INTERACT -gt 0 ] && interact;
     else
-        PATCH_DIR=$PATCH_DIR$BRANCH;
-    fi
+        for FILE in $( git diff --name-only $LAST_SYNCED HEAD ); do
+            FILES+=( $( echo $FILE | sed 's/$MAINSTREAM/$CLONE/g' ) );
+            [ ! -d $PATCH_DIR ] && mkdir $PATCH_DIR;
+            DEST="$PATCH_DIR/$( echo ${FILES[-1]##*/} )";
+            # as it happens, there could be several files by the
+            # same name, therefore, need to preserve already created
+            # patches from overwriting
+            [ -f $DEST ] && DEST="$DEST.$( tr -cd '[:alnum:]' < \
+                                  /dev/urandom | \
+                                  fold -w 8 | \
+                                  head -n 1 )";
+            if [ ! -f "$DIR/$CLONE/${FILES[-1]}" ]; then
+                [ ! -d "$( dirname $DIR/$CLONE/${FILES[-1]} )" ] && \
+                    mkdir "$( dirname $DIR/$CLONE/${FILES[-1]} )";
+                touch "$DIR/$CLONE/${FILES[-1]}";
+            fi
+            git diff "$DIR/$CLONE/${FILES[-1]}" $DIR/$MAINSTREAM/$FILE | \
+                sed -f $SUBST > $DEST;
+            # check if created diff is empty and remove,
+            # otherwise leave it intact
+            [[ -f $DEST && ! -s $DEST ]] && rm $DEST;
+        done
 
-    if [ -z $MAINSTREAM ]; then
-        MAINSTREAM=$DEFAULT_MAINSTREAM;
-    fi
+        # check if PATCH_DIR folder has patches, remove if it is empty,
+        # otherwise report number of files changed within original
+        # repository, the number of actual patches (non-empty), and
+        # if the verbosity level is adjusted, report names of the
+        # patches
+        if [[ -d $PATCH_DIR && -z "$( ls -A $PATCH_DIR )" ]]; then
+            rmdir $PATCH_DIR;
+            printf "%d files changed in %s, but no patches are\
+                    required for %s.\n"\
+                    ${#FILES[@]}\
+                    $MAINSTREAM\
+                    $CLONE;
+        elif [ -d $PATCH_DIR ]; then
+            printf "Files changed :\t%d\n" ${#FILES[@]};
+            [ $FLAG_DEBUG -gt 0 ] && \
+                printf "              :\t%s\n" ${FILES[@]};
+            printf "Files to patch:\t%d\n" $( ls -A $PATCH_DIR | \
+                                           wc -l );
+            [ $FLAG_DEBUG -gt 0 ] && \
+                printf "              :\t%s\n" $( ls -A $PATCH_DIR );
 
-    if [ -z $REPOSITORY ]; then
-        REPOSITORY=$DEFAULT_REPOSITORY;
-    fi
-
-#REM    echo -n "$BRANCH \n $PATCH_DIR \n $MAINSTREAM \n $REPOSITORY \n";
-}
-
-setDefaults;
-doGetList;
-
-
-# Check if path for storing patches exists
-# If it is not, then create and report
-if [ ! -d $PATCH_DIR ]; then
-    echo -n "Creating $PATCH_DIR";
-    [ ! $( mkdir $PATCH_DIR ) ] && echo "...done" || echo "...failed";
-else
-    echo "$PATCH_DIR... exists";
-fi
-
-
-# File enumerator
-fnnum=0;
-
-while IFS='' read -r line || [[ -n "$line" ]]; do
-
-    MAINSTREAMN="$MAINSTREAM/$line";
-    REPOSITORYN="$REPOSITORY/$( echo $line | sed 's/bitcoin/umkoin/g' )";
-
-    if [ ! -f "$REPOSITORYN" ]; then        # Check if cloned Repo file exists
-
-        if [ ! -d ${REPOSITORYN%/*} ]; then # Check if path exists
-            mkdir ${REPOSITORYN%/*};        # Create path if it doesn't exist
-        fi
-
-        touch "$REPOSITORYN";               # Create stub if needed
-
-    fi
-
-    if [ ! -f "$MAINSTREAMN" ]; then # Check if original Repo file exists
-
-        rm "$REPOSITORYN"; # There is no original Repo source, remove
-                           # orphaned cloned Repo file
-
-        continue;          # No need to proceed with absent files,
-                           # skip to next file
-    fi
-
-    # Set forth the umkoin...
-    sed -i 's/БІТКО/УМКО/g' $MAINSTREAMN;
-    sed -i 's/Бітко/Умко/g' $MAINSTREAMN;
-    sed -i 's/бітко/умко/g' $MAINSTREAMN;
-    sed -i 's/БИТКО/УМКО/g' $MAINSTREAMN;
-    sed -i 's/Битко/Умко/g' $MAINSTREAMN;
-    sed -i 's/битко/умко/g' $MAINSTREAMN;
-    sed -i 's/BITCOIN/UMKOIN/g' $MAINSTREAMN;
-    sed -i 's/Bitcoin/Umkoin/g' $MAINSTREAMN;
-    sed -i 's/bitcoin/umkoin/g' $MAINSTREAMN;
-    sed -i 's/bitcon/umkon/g' $MAINSTREAMN;
-    sed -i 's/8332/6332/g' $MAINSTREAMN;
-    sed -i 's/8333/6333/g' $MAINSTREAMN;
-    sed -i 's/18333/16333/g' $MAINSTREAMN;
-    sed -i 's/BTC/UMK/g' $MAINSTREAMN;
-    sed -i 's/btc/umk/g' $MAINSTREAMN;
-    sed -i 's/2009, COPYRIGHT_YEAR/2017, COPYRIGHT_YEAR/g' $MAINSTREAMN;
-    sed -i 's/URL_WEBSITE = \"<https:\/\/bitcoincore/URL_WEBSITE = \"<http:\/\/umkoin/g' $MAINSTREAMN;
-    sed -i 's/COPYRIGHT_STR \"2009-\" STRINGIZE/COPYRIGHT_STR \"2017-\" STRINGIZE/g' $MAINSTREAMN;
-    sed -i 's/5wyqrzbvrdsumnok/klfchu53kxun6zx5/g' $MAINSTREAMN;
-    sed -i 's/arg(2009)/arg(2017)/g' $MAINSTREAMN;
-    # Set back the bitcoin...
-    sed -i 's/en.umkoin.it/en.bitcoin.it/g' $MAINSTREAMN;
-    sed -i 's/Umkoin Core devel/Bitcoin Core devel/g' $MAINSTREAMN;
-    sed -i 's/umkoin-core\//bitcoin-core\//g' $MAINSTREAMN;
-    sed -i 's/umkoincore.org/bitcoincore.org/g' $MAINSTREAMN;
-    sed -i 's/umkoin.stackexchange/bitcoin.stackexchange/g' $MAINSTREAMN;
-    sed -i 's/umkointalk.org/bitcointalk.org/g' $MAINSTREAMN;
-    sed -i 's/umkoin\/bips\/blob\//bitcoin\/bips\/blob\//g' $MAINSTREAMN;
-    sed -i 's/umkoin\/umkoin\/blob\//bitcoin\/bitcoin\/blob\//g' $MAINSTREAMN;
-    sed -i 's/umkoin\/umkoin\/issues\//bitcoin\/bitcoin\/issues\//g' $MAINSTREAMN;
-    sed -i 's/umkoin\/umkoin\/pull\//bitcoin\/bitcoin\/pull\//g' $MAINSTREAMN;
-    # Set forth the umkoin in special cases...
-    sed -i 's/bitcoincore.org\/cfields/umkoin.org\/cfields/g' $MAINSTREAMN;
-    sed -i 's/github.com\/bitcoin-core\/gitian.sigs/github.com\/umkoin\/gitian.sigs/g' $MAINSTREAMN;
-    sed -i 's/github.com\/bitcoin-core\/umkoin/github.com\/umkoin\/umkoin/g' $MAINSTREAMN;
-    # Genesis block takeover
-    sed -i 's/04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38c4f35504e51ec112de5c384df7ba0b8d578a4c702b6bf11d5f/04880766d2f2a4f8e8a2ca8ef5f6baf014f2ac460acc69604df1af697ec9cd9d01548a7d6015e0cabfcbc160316143d9aae4a17c944f611b8daf18fb1492935d67/g' $MAINSTREAMN;
-    sed -i 's/04 67 8a fd b0/04 88 07 66 d2/g' $MAINSTREAMN;
-
-    if [ -f "$PATCH_DIR/a$fnnum.txt" ]; then
-        continue;
-    fi
-
-    git diff $REPOSITORYN $MAINSTREAMN > "$PATCH_DIR/a$fnnum.txt";
-
-    if [ ! -s "$PATCH_DIR/a$fnnum.txt" ]; then
-
-        echo -n "Empty file $PATCH_DIR/a$fnnum.txt";
-        rm "$PATCH_DIR/a$fnnum.txt";
-
-        if [ $? ]; then
-            echo "...deleted";
+            [ $FLAG_INTERACT -gt 0 ] && interact;
         else
-            echo "...deletion failed";
+            printf "No patches necessary, repositories seem to be in\
+                    sync.\n";
         fi
-
     fi
+    popd;
 
-    ((fnnum++));
-
-done < "$FILENAMES_LIST";
-
-
-#####
-# Cleanup temporary files
-#
-doCleanup $gitlog;
-doCleanup $FILENAMES_LIST;
-doCleanup $PATCH_DIR;
-
-
-#####
-# Report for which branch diffs were processed.
-#
-if [ -d $PATCH_DIR ]; then
-    echo "Diffs between $REPOSITORY $MAINSTREAM on branch $BRANCH are in $PATCH_DIR";
-    ls -l $PATCH_DIR;
+else
+    displayHelp;
 fi
 
 
