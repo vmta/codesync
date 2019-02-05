@@ -26,17 +26,19 @@
 # VARIABLES
 #####################################################################
 #
-source common/variables;
+DIR="$( cd $( dirname ${BASH_SOURCE[0]} ) > /dev/null 2>&1 && pwd )";
 #
+source $DIR/common/variables;
+#
+BRANCHES=();
 REPOS=();
 REPO_URLS=();
-BRANCHES=();
 VERSION="0.1";
 #####################################################################
 
 
 #####################################################################
-# REDEFINE BUILTIN COMMANDS (SILENCER)
+# REDEFINE BUILTIN COMMANDS (SILENCER), PROVIDE COMMON FUNCTIONS
 #####################################################################
 source common/silencer;
 source common/repository;
@@ -68,17 +70,16 @@ function displayHelp()
                          gets checked-out by default)\n
                    -x \t Requires no argument, reset tracking for\
                          specified branches\n\n
-                 Example:\n
+                 Example:\n\n
                    $( basename $0 ) -b '0.17|0.16' -r\
                    https://github.com/umkoin/umkoin.git\
                    -r https://github.com/bitcoin/bitcoin.git\n\n
-                 On completion, there shall be both repositories\
-                 cloned locally with branches 0.17 and 0.16 set to be\
-                 tracked respectfully in each of the cloned\
-                 repositories, assuming the remotes have these\
-                 branches.\n";
+                 On completion, there shall be both repositories cloned\
+                 locally with branches 0.17 and 0.16 set to be tracked\
+                 respectfully in each of the cloned repositories, assuming\
+                 the remotes have these branches.\n";
 
-    echo -e $STRING;
+    echo -e $STRING | more;
 
     exit 1;
 }
@@ -197,6 +198,8 @@ if [[ $# -gt 0 ]]; then
 
         esac
     done
+
+    # PERFOM SOME ACTION
 
     if [ $RESET_TRACKING -eq 0 ]; then
         if [ ${#REPO_URLS[@]} -gt 0 ]; then
