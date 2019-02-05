@@ -25,21 +25,20 @@
 # VARIABLES
 #####################################################################
 #
-VERSION="0.1";
-#
 DIR="$( cd $( dirname ${BASH_SOURCE[0]} ) > /dev/null 2>&1 && pwd )";
 #
 source $DIR/common/variables;
 #
+FILES=();
 PATCH_DIR="$DIR/git.diffs";
 PATCH_FILE="$DIR/git.diff";
-FILES=();
 SUBST="$DIR/common/substitutes";
+VERSION="0.1";
 #####################################################################
 
 
 #####################################################################
-# REDEFINE BUILTIN COMMANDS (SILENCER)
+# REDEFINE BUILTIN COMMANDS (SILENCER), PROVIDE COMMON FUNCTIONS
 #####################################################################
 source $DIR/common/silencer;
 source $DIR/common/repository;
@@ -87,9 +86,9 @@ function displayHelp()
                  on the cloned repository branch 'master'. Even\
                  though the option -b 'master' was not specified it
                  is by default preset to work on the master branch,\
-                 if not set otherwise.\n\n";
+                 if not set otherwise.\n";
 
-    echo -e $STRING;
+    echo -e $STRING | more;
 
     exit 1;
 }
@@ -130,7 +129,7 @@ if [[ $# -gt 0 ]]; then
     while getopts "b:hip:v" opt; do
         case $opt in
 
-            b)  # Set branches to track (both repos)
+            b)  # Set branch name
                 [[ ! -z "$OPTARG" ]] && \
                     BRANCH=$OPTARG;
                 ;;
@@ -166,7 +165,7 @@ if [[ $# -gt 0 ]]; then
     # Enter the CLONE repo local folder.
     # Checkout into BRANCH.
     # Get LAST_SYNCED mainstream commit SHA1.
-    [ -d "$DIR/$CLONE" ] || exit 1;
+    [[ -d "$DIR/$CLONE" ]] || exit 1;
     pushd $DIR/$CLONE;
     git checkout -f $BRANCH;
     LAST_SYNCED=$( getLastSyncedCommit );
