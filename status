@@ -24,7 +24,9 @@
 # VARIABLES
 #####################################################################
 #
-source common/variables;
+DIR="$( cd $( dirname ${BASH_SOURCE[0]} ) > /dev/null 2>&1 && pwd )";
+#
+source $DIR/common/variables;
 #
 REPOS=();
 VERSION="0.1";
@@ -32,7 +34,7 @@ VERSION="0.1";
 
 
 #####################################################################
-# REDEFINE BUILTIN COMMANDS (SILENCER)
+# REDEFINE BUILTIN COMMANDS (SILENCER), PROVIDE COMMON FUNCTIONS
 #####################################################################
 source common/silencer;
 source common/repository;
@@ -73,11 +75,11 @@ function displayHelp()
                                     -c umkoin\
                                     -m bitcoin\
                                     -b master\
-                                    -v\n
+                                    -v\n\n
                  On completion, the status for both repositories will\
                  bo shown after pulling respective updates.\n";
 
-    echo -e $STRING;
+    echo -e $STRING | more;
 
     exit 1;
 }
@@ -152,15 +154,13 @@ if [[ $# -gt 0 ]]; then
         case $opt in
 
             b)  # Set branch name
-                if [ ! -z "$OPTARG" ]; then
+                [[ ! -z "$OPTARG" ]] && \
                     BRANCH=$OPTARG;
-                fi
                 ;;
 
             c)  # Set cloned repo name
-                if [ ! -z "$OPTARG" ]; then
+                [[ ! -z "$OPTARG" ]] && \
                     REPOS[0]=$OPTARG;
-                fi
                 ;;
 
             h)  # Display help and usage info and exit
@@ -168,9 +168,8 @@ if [[ $# -gt 0 ]]; then
                 ;;
 
             m)  # Set mainstream repo name
-                if [ ! -z "$OPTARG" ]; then
+                [[ ! -z "$OPTARG" ]] && \
                     REPOS[1]=$OPTARG;
-                fi
                 ;;
 
             u)  # Set FLAG_UPDATE
@@ -188,6 +187,8 @@ if [[ $# -gt 0 ]]; then
 
         esac
     done
+
+    # PERFORM SOME ACTION
 
     # If update was requested on the command line,
     # checkout to BRANCH and proceed with local
