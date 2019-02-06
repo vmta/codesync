@@ -1,0 +1,232 @@
+#!/bin/bash
+
+#####################################################################
+# The purpose of this script is to provide synchronization hub which
+# accepts arguments and act accordingly, allowing working tree sync,
+# commit, with predefined or manually altered commit-subject, and,
+# if requested via script arguments, a push to the remote server.
+#
+# Author: Igor Gunia <vmta@yahoo.com>
+# Date:   2018-09-24
+# Ver.:   0.2
+#####################################################################
+
+
+#####################################################################
+# VARIABLES
+#####################################################################
+#
+DIR="$( cd $( dirname ${BASH_SOURCE[0]} ) > /dev/null 2>&1 && pwd )";
+#
+source $DIR/common/variables;
+#
+PATCH_DIR="$DIR/git.diffs";
+PATCH_FILE="$DIR/git.diff";
+VERSION="0.2";
+#####################################################################
+
+
+#####################################################################
+# REDEFINE BUILTIN COMMANDS (SILENCER), PROVIDE COMMON FUNCTIONS
+#####################################################################
+source common/silencer;
+source common/repository;
+#####################################################################
+
+
+#####################################################################
+# Function displayHelp
+#
+# In case the script is called with no arguments, or arguments are
+# omitted, display short message with info on script version,
+# acceptable arguments and an example.
+#
+displayHelp()
+{
+
+    local STRING="Usage:\n
+                 $( basename $0 ) [b:cdghp:]\n\n
+                 Options:\n
+                 -b \t Requires argument, a branch name (defaults\n
+                    \t to branch \"master\")\n
+                 -c \t Commit changes after synchronization; additionally\n
+                    \t push committed changes to the server if \"push\" is\n
+                    \t specified\n
+                 -g \t Push the committed changes to the server\n
+                 -h \t Display this help and exit\n
+                 -p \t Requires argument to set alternative\n
+                    \t path to patches (default: $PATCH_DIR)\n";
+
+    echo -e $STRING;
+
+    exit 0;
+
+}
+
+
+#####################################################################
+# Function doSync
+#
+doSync()
+{
+
+#    local BRANCH=$1;
+
+    pushd $CLONE;
+    git checkout $BRANCH;
+    popd;
+
+    if [[ -d "$PATCH_DIR" && ! -z "$( ls -A $PATCH_DIR )"]]; then
+        for file in $( ls "$PATCH_DIR" ); do
+            patch -p1 < "$PATCH_DIR/$file" && \
+                rm "$PATCH_DIR/$file";
+        done
+    elif [[ -f "$PATCH_FILE" ]]; then
+        patch -p1 < "$PATCH_FILE" && \
+            rm "$PATCH_FILE";
+    fi
+}
+
+
+#####################################################################
+# Function doCommit
+#
+doCommit()
+{
+    pushd $MAINSTREAM;
+    git checkout $BRANCH;
+    local STR1="Sync to mainstream commit $( git log --format='%H (%aD)' -n 1 )";
+    local STR2="$( git log --format='%s' -n 1 )";
+    popd;
+
+    pushd $CLONE;
+    git checkout $BRANCH;
+    git add -A;
+    git commit -s -m $STR1 -m $STR2;
+    git commit --amend --no-edit -S;
+    popd;
+
+    ((FLAG_COMMIT++));
+}
+#####################################################################
+
+
+#####################################################################
+# Function doPush
+#
+doPush()
+{
+    pushd $CLONE;
+    git checkout $BRANCH;
+    git push origin $BRANCH;
+    popd;
+
+    ((FLAG_PUSH++));
+}
+#####################################################################
+
+
+#####################################################################
+# Function doClean
+#
+doClean()
+{
+    [[ -d $PATCH_DIR ]] && rmdir $PATCH_DIR;
+    [[ -f $PATCH_FILE ]] && rm $PATCH_FILE;
+}
+#####################################################################
+
+
+#####################################################################
+# Check if script is called with arguments.
+# Cycle through them.
+if [ $# -gt 0 ]; then
+
+    # Cycle through options
+    # -b requires an argument (branch name, defaults to master)
+    # -c accepts no arguments
+    # -d accepts no arguments
+    # -g accepts no arguments
+    # -h accepts no arguments
+    # -p requires an argument (PATH)
+    #
+    while getopts "b:cdf:ghp:" opt; do
+
+        case "$opt" in
+
+            b)  # Set branch name
+                [[ ! -z "$OPTARG" ]] && \
+                    BRANCH=$OPTARG;
+                ;;
+
+            c)  # Enable commit after sync
+                FLAG_COMMIT=1;
+                ;;
+
+            d)  # Enable debug
+                FLAG_DEBUG=1;
+                ;;
+
+            f)  # Alternative path to patch-file
+                if [ -f $OPTARG ]; then
+                    PATCH_FILE=$OPTARG;
+                else
+                    echo "$OPTARG is not a valid file, will try $PATCH_FILE";
+                fi
+                ;;
+
+            g)  # Push commit
+                FLAG_PUSH=1;
+                ;;
+
+            h)  # Display help and usage info and exit
+                displayHelp;
+                ;;
+
+            p)  # Alternative path to patches
+                if [ -d $OPTARG ]; then
+                    PATCH_DIR=$OPTARG;
+                else
+                    echo "$OPTARG is not a valid path, will try $PATCH_DIR";
+                fi
+                ;;
+
+            default) # Option is omitted, display usage info
+                displayHelp;
+                ;;
+
+        esac
+
+    done
+
+    # PERFORM SOME ACTION
+
+    #####
+    # Check if PATCH_DIR has patches and sync, or just skip.
+    #
+    if [[ -d $PATCH_DIR && ! -z "$( ls -A $PATCH_DIR )" || -f $PATCH_FILE ]]; then
+        doSync;
+    fi
+
+    #####
+    # Check if we shall commit and act appropriately.
+    #
+    [[ $FLAG_COMMIT -eq 1 ]] && doCommit;
+
+    #####
+    # Check if we shall push the commit and act accordingly.
+    #
+    [[ $FLAG_PUSH -eq 1 ]] && doPush;
+
+    #####
+    # Check if we shall clean up after successful commit or push.
+    #
+    if [[ $FLAG_COMMIT -eq 2 && $FLAG_PUSH -eq 2 ]]; then
+        doClean;
+    fi
+
+else
+    displayHelp;
+fi
+
+exit $?
