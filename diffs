@@ -126,8 +126,12 @@ function interact()
 # Cycle through them.
 if [[ $# -gt 0 ]]; then
 
-    while getopts "b:hip:v" opt; do
+    while getopts "ab:hip:v" opt; do
         case $opt in
+
+            a)  # Perform sync to the latest MAINSTREAM HEAD
+                FLAG_FIRST_UNSYNCED=0;
+                ;;
 
             b)  # Set branch name
                 [[ ! -z "$OPTARG" ]] && \
@@ -168,39 +172,61 @@ if [[ $# -gt 0 ]]; then
     [[ -d "$DIR/$CLONE" ]] || exit 1;
     pushd $DIR/$CLONE;
     git checkout -f $BRANCH;
+    read -p "Would you like to pull updates for $CLONE? [Y/N] " RESP;
+    [[ "$RESP" =~ " [Y][y] " ]] && \
+        git pull origin $BRANCH > /dev/null 2>&1;
     LAST_SYNCED=$( getLastSyncedCommit );
     popd;
 
     # Check if MAINSTREAM repo local folder is accessible or exit.
     # Enter the MAINSTREAM repo local folder.
     # Checkout into BRANCH.
-    # Pull updates from remote server.
+    # Pull updates from remote server if required.
+    #
+    # Check if diff between the last synced and first unsynced
+    # commits is to be taken into consideration (the default).
+    # Reset to that commit suppressing the logs. Otherwise
+    # consider first unsynced commit that of the HEAD.
+    #
     # Check if one-file-diff is requested.
-    #   (true)   get diff between the last synced commit and current
-    #            HEAD run through substitution filter and prepare
-    #            one-file-patch.
+    #   (true)   get diff between the last synced commit and first
+    #            unsynced one, run through substitution filter and
+    #            prepare one-file-patch, check if created PATCH_FILE
+    #            is empty and remove, otherwise leave intact and
+    #            report its name.
     #   (false)  get list of changed files between the last synced
-    #            commit and current HEAD, auto-rename if needed, and
-    #            get per-file-patches.
+    #            and first unsynced commits, auto-rename if needed,
+    #            and get per-file-patches.
     [ -d "$DIR/$MAINSTREAM" ] || exit 2;
     pushd $DIR/$MAINSTREAM;
     git checkout -f $BRANCH;
-    git pull origin $BRANCH;
+    read -p "Would you like to pull updates for $MAINSTREAM? [Y/N] " RESP;
+    [[ "$RESP" =~ " [Y][y] " ]] && \
+        git pull origin $BRANCH > /dev/null 2>&1;
+
+    if [ $FLAG_FIRST_UNSYNCED -eq 1 ]; then
+        UNSYNCED=$( getFirstUnsyncedCommit $LAST_SYNCED );
+        git reset --hard $UNSYNCED > /dev/null 2>&1;
+    else
+        UNSYNCED="HEAD";
+    fi
+
     if [ $ONE_FILE_DIFF -eq 1 ]; then
-        # get diff between last synced commit and the HEAD,
-        # auto-apply substitutions and write to PATCH_FILE
-        git diff $LAST_SYNCED HEAD | sed -f $SUBST > $PATCH_FILE;
-        # check if created PATCH_FILE is empty and remove,
-        # otherwise leave it intact and report its name
+        git diff $LAST_SYNCED $UNSYNCED | \
+            sed -f $SUBST | \
+            sed '/^diff --git*/ s/ a\// a\/umkoin\//' | \
+            sed '/^diff --git*/ s/ b\// b\/bitcoin\//' | \
+            sed '/^--- a*/ s/ a\// a\/umkoin\//' | \
+            sed '/^+++ b*/ s/ b\// b\/bitcoin\//' > $PATCH_FILE;
         [[ -f $PATCH_FILE && ! -s $PATCH_FILE ]] && \
             rm $PATCH_FILE || \
             printf "Diff file: %s will patch %d files.\n" \
                     $PATCH_FILE \
-                    $( git diff --name-only $LAST_SYNCED HEAD | \
+                    $( git diff --name-only $LAST_SYNCED $UNSYNCED | \
                     wc -l );
         [ $FLAG_INTERACT -gt 0 ] && interact;
     else
-        for FILE in $( git diff --name-only $LAST_SYNCED HEAD ); do
+        for FILE in $( git diff --name-only $LAST_SYNCED $UNSYNCED ); do
             FILES+=( $( echo $FILE | sed 's/$MAINSTREAM/$CLONE/g' ) );
             [ ! -d $PATCH_DIR ] && mkdir $PATCH_DIR;
             DEST="$PATCH_DIR/$( echo ${FILES[-1]##*/} )";
@@ -216,8 +242,14 @@ if [[ $# -gt 0 ]]; then
                     mkdir "$( dirname $DIR/$CLONE/${FILES[-1]} )";
                 touch "$DIR/$CLONE/${FILES[-1]}";
             fi
-            git diff "$DIR/$CLONE/${FILES[-1]}" $DIR/$MAINSTREAM/$FILE | \
-                sed -f $SUBST > $DEST;
+            git diff "../$CLONE/${FILES[-1]}" $FILE | \
+                sed -f $SUBST | \
+#                sed '/^diff --git*/ s/ a\/..\// a\//' | \
+#                sed '/^diff --git*/ s/ b\// b\/bitcoin\//' | \
+                sed '/^diff --git*/ s/ a\/..\// a\//; /^diff --git*/ s/ b\// b\/bitcoin\//' | \
+                sed '/^--- a*/ s/ a\/..\// a\//' | \
+                sed '/^+++ b*/ s/ b\// b\/bitcoin\//' > $DEST;
+
             # check if created diff is empty and remove,
             # otherwise leave it intact
             [[ -f $DEST && ! -s $DEST ]] && rm $DEST;
@@ -246,8 +278,8 @@ if [[ $# -gt 0 ]]; then
 
             [ $FLAG_INTERACT -gt 0 ] && interact;
         else
-            printf "No patches necessary, repositories seem to be in\
-                    sync.\n";
+            echo "No patches necessary, repositories seem to be in\
+                  sync.\n";
         fi
     fi
     popd;

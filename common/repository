@@ -160,21 +160,17 @@ function getCurrentBranch()
 function updateRepo()
 {
     local BRANCH="";
-    local LOG="/dev/null 2>&1";
 
     [ -z "$1" ] && \
         BRANCH=$( git branch | grep \* | tr -d '\*|[:blank:]' ) || \
         BRANCH=$1;
 
-    [ ! -z "$2" ] && \
-        LOG=$2;
-
-    git pull origin $BRANCH > $LOG;
+    git pull origin $BRANCH > /dev/null 2>&1;
 }
 
 
 #####################################################################
-# Function updateRepo
+# Function rewindRepo
 #
 # Rewind repository N commits back.
 #
