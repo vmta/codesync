@@ -172,8 +172,8 @@ if [[ $# -gt 0 ]]; then
                     REPOS[1]=$OPTARG;
                 ;;
 
-            u)  # Set FLAG_UPDATE
-                FLAG_UPDATE=1;
+            u)  # Set FLAG_PULL
+                FLAG_PULL=1;
                 ;;
 
             v)  # Set DEBUG
@@ -193,7 +193,7 @@ if [[ $# -gt 0 ]]; then
     # If update was requested on the command line,
     # checkout to BRANCH and proceed with local
     # repos update.
-    if [ $FLAG_UPDATE -eq 1 ]; then
+    if [ $FLAG_PULL -eq 1 ]; then
         for REPO in ${REPOS[@]}; do
             if [ -d $REPO ]; then
                 pushd $REPO;
