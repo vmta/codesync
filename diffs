@@ -189,7 +189,12 @@ if [[ $# -gt 0 ]]; then
     if [ $ONE_FILE_DIFF -eq 1 ]; then
         # get diff between last synced commit and the HEAD,
         # auto-apply substitutions and write to PATCH_FILE
-        git diff $LAST_SYNCED HEAD | sed -f $SUBST > $PATCH_FILE;
+        git diff $LAST_SYNCED HEAD | \
+            sed -f $SUBST | \
+            sed '/^diff --git*/ s/ a\// a\/umkoin\//' | \
+            sed '/^diff --git*/ s/ b\// b\/bitcoin\//' | \
+            sed '/^--- a*/ s/ a\// a\/umkoin\//' | \
+            sed '/^+++ b*/ s/ b\// b\/bitcoin\//' > $PATCH_FILE;
         # check if created PATCH_FILE is empty and remove,
         # otherwise leave it intact and report its name
         [[ -f $PATCH_FILE && ! -s $PATCH_FILE ]] && \
@@ -216,8 +221,13 @@ if [[ $# -gt 0 ]]; then
                     mkdir "$( dirname $DIR/$CLONE/${FILES[-1]} )";
                 touch "$DIR/$CLONE/${FILES[-1]}";
             fi
-            git diff "$DIR/$CLONE/${FILES[-1]}" $DIR/$MAINSTREAM/$FILE | \
-                sed -f $SUBST > $DEST;
+#            git diff "$DIR/$CLONE/${FILES[-1]}" $DIR/$MAINSTREAM/$FILE | \
+            git diff "../$CLONE/${FILES[-1]}" $FILE | \
+                sed -f $SUBST | \
+                sed '/^diff --git*/ s/ a\/..\// a\//' | \
+                sed '/^diff --git*/ s/ b\// b\/bitcoin\//' | \
+                sed '/^--- a*/ s/ a\/..\// a\//' | \
+                sed '/^+++ b*/ s/ b\// b\/bitcoin\//' > $DEST;
             # check if created diff is empty and remove,
             # otherwise leave it intact
             [[ -f $DEST && ! -s $DEST ]] && rm $DEST;
