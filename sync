@@ -77,7 +77,7 @@ doSync()
     popd;
 
     if [[ -d "$PATCH_DIR" && ! -z "$( ls -A $PATCH_DIR )" ]]; then
-        for file in $( ls "$PATCH_DIR" ); do
+        for file in $( ls -A "$PATCH_DIR" ); do
             patch -p1 < "$PATCH_DIR/$file" && \
                 rm "$PATCH_DIR/$file";
         done

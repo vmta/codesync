@@ -56,8 +56,11 @@ function displayHelp()
 {
     local STRING="Script $( basename $0 ) version $VERSION\n
                  Usage:\n
-                   $( basename $0 ) [b:hip:v]\n\n
+                   $( basename $0 ) [ab:hip:uv]\n\n
                  Options:\n
+                   -a \t Specify to get patches for all unsynced\
+                         commits, rather than the first one (the\
+                         default)\n
                    -b \t Requires argument, a branch name to set\
                          tracking on, several branches can be\
                          specified delimited with '|' provided that\
@@ -70,6 +73,7 @@ function displayHelp()
                    -p \t Requires argument, either \"single\" or\
                          \"multi\" to switch between single- and\
                          multi-file patch creation mode\n
+                   -u \t Pull updates to repositories.\n
                    -v \t Requires no argument, when specified,\
                          produces broader logs.\n\n
                  Example:\n\n
@@ -126,7 +130,7 @@ function interact()
 # Cycle through them.
 if [[ $# -gt 0 ]]; then
 
-    while getopts "ab:hip:v" opt; do
+    while getopts "ab:hip:uv" opt; do
         case $opt in
 
             a)  # Perform sync to the latest MAINSTREAM HEAD
@@ -143,12 +147,16 @@ if [[ $# -gt 0 ]]; then
                 ;;
 
             i)  # Set interactivity
-                ((FLAG_INTERACT++));
+                FLAG_INTERACT=1;
                 ;;
 
             p)  # Switch single/multi file patch creation mode
-                [[ ! -z "$OPTARG" && "$OPTARG" == "multi" ]] && \
-                    ONE_FILE_DIFF=0;
+                [[ ! -z "$OPTARG" && "$OPTARG" == "single" ]] && \
+                    ONE_FILE_DIFF=1;
+                ;;
+
+            u)  # Pull updates to repositories
+                FLAG_PULL=1;
                 ;;
 
             v)  # Set DEBUG
@@ -172,8 +180,9 @@ if [[ $# -gt 0 ]]; then
     [[ -d "$DIR/$CLONE" ]] || exit 1;
     pushd $DIR/$CLONE;
     git checkout -f $BRANCH;
-    read -p "Would you like to pull updates for $CLONE? [Y/N] " RESP;
-    [[ "$RESP" =~ " [Y][y] " ]] && \
+#    read -p "Would you like to pull updates for $CLONE? [Y/N] " RESP;
+#    [[ "$RESP" =~ " [Y][y] " ]] && \
+    [[ $FLAG_PULL -eq 1 ]] && \
         git pull origin $BRANCH > /dev/null 2>&1;
     LAST_SYNCED=$( getLastSyncedCommit );
     popd;
@@ -200,8 +209,14 @@ if [[ $# -gt 0 ]]; then
     [ -d "$DIR/$MAINSTREAM" ] || exit 2;
     pushd $DIR/$MAINSTREAM;
     git checkout -f $BRANCH;
-    read -p "Would you like to pull updates for $MAINSTREAM? [Y/N] " RESP;
-    [[ "$RESP" =~ " [Y][y] " ]] && \
+
+# Temp Enable Start
+#    read -p "Would you like to pull updates for $MAINSTREAM? [Y/N] " RESP;
+#    [[ "$RESP" =~ " [Y][y] " ]] && \
+#        git pull origin $BRANCH > /dev/null 2>&1;
+# Temp Enable End
+
+    [[ $FLAG_PULL -eq 1 ]] && \
         git pull origin $BRANCH > /dev/null 2>&1;
 
     if [ $FLAG_FIRST_UNSYNCED -eq 1 ]; then
@@ -217,7 +232,8 @@ if [[ $# -gt 0 ]]; then
             sed '/^diff --git*/ s/ a\// a\/umkoin\//' | \
             sed '/^diff --git*/ s/ b\// b\/bitcoin\//' | \
             sed '/^--- a*/ s/ a\// a\/umkoin\//' | \
-            sed '/^+++ b*/ s/ b\// b\/bitcoin\//' > $PATCH_FILE;
+            sed '/^+++ b*/ s/ b\// b\/bitcoin\//' | \
+            sed '/^+++ b*/ s/umkoin/bitcoin/g' > $PATCH_FILE;
         [[ -f $PATCH_FILE && ! -s $PATCH_FILE ]] && \
             rm $PATCH_FILE || \
             printf "Diff file: %s will patch %d files.\n" \
@@ -227,7 +243,10 @@ if [[ $# -gt 0 ]]; then
         [ $FLAG_INTERACT -gt 0 ] && interact;
     else
         for FILE in $( git diff --name-only $LAST_SYNCED $UNSYNCED ); do
-            FILES+=( $( echo $FILE | sed 's/$MAINSTREAM/$CLONE/g' ) );
+
+##            echo $FILE | sed 's/'$MAINSTREAM'/'$CLONE'/g';
+            FILES+=( $( echo $FILE | sed 's/'$MAINSTREAM'/'$CLONE'/g' ) );
+
             [ ! -d $PATCH_DIR ] && mkdir $PATCH_DIR;
             DEST="$PATCH_DIR/$( echo ${FILES[-1]##*/} )";
             # as it happens, there could be several files by the
@@ -244,11 +263,11 @@ if [[ $# -gt 0 ]]; then
             fi
             git diff "../$CLONE/${FILES[-1]}" $FILE | \
                 sed -f $SUBST | \
-#                sed '/^diff --git*/ s/ a\/..\// a\//' | \
-#                sed '/^diff --git*/ s/ b\// b\/bitcoin\//' | \
-                sed '/^diff --git*/ s/ a\/..\// a\//; /^diff --git*/ s/ b\// b\/bitcoin\//' | \
+                sed '/^diff --git*/ s/ a\/..\// a\//' | \
+                sed '/^diff --git*/ s/ b\// b\/bitcoin\//' | \
                 sed '/^--- a*/ s/ a\/..\// a\//' | \
-                sed '/^+++ b*/ s/ b\// b\/bitcoin\//' > $DEST;
+                sed '/^+++ b*/ s/ b\// b\/bitcoin\//' | \
+                sed '/^+++ b*/ s/umkoin/bitcoin/g' > $DEST;
 
             # check if created diff is empty and remove,
             # otherwise leave it intact
@@ -278,7 +297,7 @@ if [[ $# -gt 0 ]]; then
 
             [ $FLAG_INTERACT -gt 0 ] && interact;
         else
-            echo "No patches necessary, repositories seem to be in\
+            printf "No patches necessary, repositories seem to be in\
                   sync.\n";
         fi
     fi
