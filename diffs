@@ -180,8 +180,6 @@ if [[ $# -gt 0 ]]; then
     [[ -d "$DIR/$CLONE" ]] || exit 1;
     pushd $DIR/$CLONE;
     git checkout -f $BRANCH;
-#    read -p "Would you like to pull updates for $CLONE? [Y/N] " RESP;
-#    [[ "$RESP" =~ " [Y][y] " ]] && \
     [[ $FLAG_PULL -eq 1 ]] && \
         git pull origin $BRANCH > /dev/null 2>&1;
     LAST_SYNCED=$( getLastSyncedCommit );
@@ -209,13 +207,6 @@ if [[ $# -gt 0 ]]; then
     [ -d "$DIR/$MAINSTREAM" ] || exit 2;
     pushd $DIR/$MAINSTREAM;
     git checkout -f $BRANCH;
-
-# Temp Enable Start
-#    read -p "Would you like to pull updates for $MAINSTREAM? [Y/N] " RESP;
-#    [[ "$RESP" =~ " [Y][y] " ]] && \
-#        git pull origin $BRANCH > /dev/null 2>&1;
-# Temp Enable End
-
     [[ $FLAG_PULL -eq 1 ]] && \
         git pull origin $BRANCH > /dev/null 2>&1;
 
@@ -230,10 +221,7 @@ if [[ $# -gt 0 ]]; then
         git diff $LAST_SYNCED $UNSYNCED | \
             sed -f $SUBST | \
             sed '/^diff --git*/ s/ a\// a\/umkoin\//' | \
-            sed '/^diff --git*/ s/ b\// b\/bitcoin\//' | \
-            sed '/^--- a*/ s/ a\// a\/umkoin\//' | \
-            sed '/^+++ b*/ s/ b\// b\/bitcoin\//' | \
-            sed '/^+++ b*/ s/umkoin/bitcoin/g' > $PATCH_FILE;
+            sed '/^--- a*/ s/ a\// a\/umkoin\//' > $PATCH_FILE;
         [[ -f $PATCH_FILE && ! -s $PATCH_FILE ]] && \
             rm $PATCH_FILE || \
             printf "Diff file: %s will patch %d files.\n" \
@@ -244,7 +232,6 @@ if [[ $# -gt 0 ]]; then
     else
         for FILE in $( git diff --name-only $LAST_SYNCED $UNSYNCED ); do
 
-##            echo $FILE | sed 's/'$MAINSTREAM'/'$CLONE'/g';
             FILES+=( $( echo $FILE | sed 's/'$MAINSTREAM'/'$CLONE'/g' ) );
 
             [ ! -d $PATCH_DIR ] && mkdir $PATCH_DIR;
@@ -264,10 +251,7 @@ if [[ $# -gt 0 ]]; then
             git diff "../$CLONE/${FILES[-1]}" $FILE | \
                 sed -f $SUBST | \
                 sed '/^diff --git*/ s/ a\/..\// a\//' | \
-                sed '/^diff --git*/ s/ b\// b\/bitcoin\//' | \
-                sed '/^--- a*/ s/ a\/..\// a\//' | \
-                sed '/^+++ b*/ s/ b\// b\/bitcoin\//' | \
-                sed '/^+++ b*/ s/umkoin/bitcoin/g' > $DEST;
+                sed '/^--- a*/ s/ a\/..\// a\//' > $DEST;
 
             # check if created diff is empty and remove,
             # otherwise leave it intact
