@@ -5,19 +5,31 @@
 # the mainstream repositories.
 #
 # The script accepts arguments:
+# -a - get patches to all unsynced commits, rather than the default
+#      first unsynced commit only mode
 # -b - get branch name to compare repos (defaults to master)
+# -c - get cloned repository name (should be locally accessible)
 # -h - display help and usage info and exit
 # -i - enable user interaction after patches are created
+# -m - get mainstream repository name (should be locally accessible)
 # -p - switch single/multi file patch creation mode (default to
 #      single file mode)
+# -u - pull updates to repositories
 # -v - set verbosity level
 #
 # If no arguments specified, the script will display help and usage
 # information with immediate execution abortion.
 #
 # Author: Igor Gunia <vmta@yahoo.com>
-# Date:   2019-02-02
-# Ver.:   0.1
+# Date:   2019-02-14
+# Ver.:   0.2
+#
+# v.0.2   2019-02-14
+#         Allow command-line arguments "c", for specifying CLONE
+#         repository and "m". for specifying MAINSTREAM reposditory
+#
+# v.0.1   2019-02-02
+#         Initial version
 #####################################################################
 
 
@@ -27,7 +39,7 @@
 #
 DIR="$( cd $( dirname ${BASH_SOURCE[0]} ) > /dev/null 2>&1 && pwd )";
 #
-source $DIR/common/variables;
+source $DIR/common/config;
 #
 FILES=();
 PATCH_DIR="$DIR/git.diffs";
@@ -56,7 +68,7 @@ function displayHelp()
 {
     local STRING="Script $( basename $0 ) version $VERSION\n
                  Usage:\n
-                   $( basename $0 ) [ab:hip:uv]\n\n
+                   $( basename $0 ) [ab:c:him:p:uv]\n\n
                  Options:\n
                    -a \t Specify to get patches for all unsynced\
                          commits, rather than the first one (the\
@@ -65,11 +77,17 @@ function displayHelp()
                          tracking on, several branches can be\
                          specified delimited with '|' provided that\
                          they are surrounded by quotes\n
+                   -c \t Requires cloned repository name. The name\
+                         should be locally accessible (short name,\
+                         i.e. umkoin, bitcoin, etc).\n
                    -h \t Requires no argument, display help info and\
                          exit\n
                    -i \t Requires no argument, when specified,\
                          provides interaction after patches are\
                          created\n
+                   -m \t Requires mainstream repository name. The\
+                         name should be locally accessible (short\
+                         name, i.e. umkoin, bitcoin, etc).\n
                    -p \t Requires argument, either \"single\" or\
                          \"multi\" to switch between single- and\
                          multi-file patch creation mode\n
@@ -84,13 +102,14 @@ function displayHelp()
                  -p 'single' could effectively be omitted, since\
                  it is the default behaviour, so the above command\
                  may as well be: $( basename $0 ) -b '0.17'\n\n
-                   $( basename $0 ) -p 'multi'\n\n
+                   $( basename $0 ) -p 'multi' -c 'abc' -m def\n\n
                  On completion, there shall be a folder, containing\
                  per-file patches ready for final review/application\
-                 on the cloned repository branch 'master'. Even\
-                 though the option -b 'master' was not specified it
-                 is by default preset to work on the master branch,\
-                 if not set otherwise.\n";
+                 on the cloned repository 'abc' branch 'master' based\
+                 on mainstream repository 'def'. Even though the\
+                 option -b 'master' was not specified it is by\
+                 default preset to work on the master branch, if not\
+                 set otherwise.\n";
 
     echo -e $STRING | more;
 
@@ -130,7 +149,7 @@ function interact()
 # Cycle through them.
 if [[ $# -gt 0 ]]; then
 
-    while getopts "ab:hip:uv" opt; do
+    while getopts "ab:c:him:p:uv" opt; do
         case $opt in
 
             a)  # Perform sync to the latest MAINSTREAM HEAD
@@ -142,12 +161,22 @@ if [[ $# -gt 0 ]]; then
                     BRANCH=$OPTARG;
                 ;;
 
+            c)  # Set cloned repo name
+                [[ ! -z "$OPTARG" ]] && \
+                    CLONE=$OPTARG;
+                ;;
+
             h)  # Display help and usage info and exit
                 displayHelp;
                 ;;
 
             i)  # Set interactivity
                 FLAG_INTERACT=1;
+                ;;
+
+            m)  # Set mainstream repo name
+                [[ ! -z "$OPTARG" ]] && \
+                    MAINSTREAM=$OPTARG;
                 ;;
 
             p)  # Switch single/multi file patch creation mode
@@ -220,8 +249,8 @@ if [[ $# -gt 0 ]]; then
     if [ $ONE_FILE_DIFF -eq 1 ]; then
         git diff $LAST_SYNCED $UNSYNCED | \
             sed -f $SUBST | \
-            sed '/^diff --git*/ s/ a\// a\/umkoin\//' | \
-            sed '/^--- a*/ s/ a\// a\/umkoin\//' > $PATCH_FILE;
+            sed '/^diff --git*/ s/ a\// a\/'$CLONE'\//' | \
+            sed '/^--- a*/ s/ a\// a\/'$CLONE'\//' > $PATCH_FILE;
         [[ -f $PATCH_FILE && ! -s $PATCH_FILE ]] && \
             rm $PATCH_FILE || \
             printf "Diff file: %s will patch %d files.\n" \
@@ -231,6 +260,15 @@ if [[ $# -gt 0 ]]; then
         [ $FLAG_INTERACT -gt 0 ] && interact;
     else
         for FILE in $( git diff --name-only $LAST_SYNCED $UNSYNCED ); do
+
+            # Test if FILE was removed from the MAINSTREAM
+            # clean from CLONE and skip to next FILE
+            if [ ! -f $FILE ]; then
+                rm $DIR/$CLONE/$( echo $FILE | \
+                    sed 's/'$MAINSTREAM'/'$CLONE'/g' ) > \
+                    /dev/null 2>&1;
+                continue;
+            fi
 
             FILES+=( $( echo $FILE | sed 's/'$MAINSTREAM'/'$CLONE'/g' ) );
 

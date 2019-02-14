@@ -6,19 +6,28 @@
 #
 # The script accepts arguments:
 # -b - get branch name to review patches for
+# -c - get cloned repository name (should be locally accessible)
 # -e - specify if reviewing "locally" or from a "remote" location,
 #      this options is used to determine which editor to use with
 #      default editor set to "gedit" (the local mode)
 # -f - specify alternative path to single-file patch
 # -h - display help and usage info and exit
+# -m - get mainstream repository name (should be locally accessible)
 # -p - specify alternative path to multi-file patches
 # -r - define which mode to use for reviewing, either to review "all"
 #      or only certain files, that conform to predefined conditions
 # -v - set verbosity level
 #
 # Author: Igor Gunia <vmta@yahoo.com>
-# Date:   2018-09-24
+# Date:   2019-02-14
 # Ver.:   0.2
+#
+# v.0.2   2019-02-14
+#         Allow command-line arguments "c", for specifying CLONE
+#         repository and "m". for specifying MAINSTREAM reposditory
+#
+# v.0.1   2018-09-24
+#         Initial version
 #####################################################################
 
 
@@ -28,7 +37,7 @@
 #
 DIR="$( cd $( dirname ${BASH_SOURCE[0]} ) > /dev/null 2>&1 && pwd )";
 #
-source $DIR/common/variables;
+source $DIR/common/config;
 #
 PATCH_DIR="$DIR/git.diffs";
 PATCH_FILE="$DIR/git.diff";
@@ -48,14 +57,20 @@ displayHelp()
 
     local STRING="Script $( basename $0 ) version $VERSION\n
                  Usage:\n
-                   $( basename $0 ) [b:e:f:hp:r:v]\n\n
+                   $( basename $0 ) [b:c:e:f:hm:p:r:v]\n\n
                  Options:\n
                    -b \t Requires branch name as an argument\
                          (default: $DEFAULT_BRANCH)\n
+                   -c \t Requires cloned repository name. The name\
+                         should be locally accessible (short name,\
+                         i.e. umkoin, bitcoin, etc).\n
                    -e \t Requires argument \"remote\" and sets an editor\
                          to nano instead of the default gedit\n
                    -f \t Specify alternative path to single-file patch\n
                    -h \t Display this help and exit\n
+                   -m \t Requires mainstream repository name. The\
+                         name should be locally accessible (short\
+                         name, i.e. umkoin, bitcoin, etc).\n
                    -p \t Specify alternative path to multi-file patches\n
                    -r \t Requires argument \"all\" and displays all\
                          patches, regardless of stop words\n
@@ -172,13 +187,18 @@ doReview()
 # Cycle through them.
 if [[ $# -gt 0 ]]; then
 
-    while getopts "b:e:f:hp:r:v" opt; do
+    while getopts "b:c:e:f:hm:p:r:v" opt; do
 
         case $opt in
 
             b)  # Set branch name
                 [[ ! -z "$OPTARG" ]] && \
                     BRANCH=$OPTARG;
+                ;;
+
+            c)  # Set cloned repo name
+                [[ ! -z "$OPTARG" ]] && \
+                    CLONE=$OPTARG;
                 ;;
 
             e)  # Set editor to nano if 'remote' is specified
@@ -196,6 +216,11 @@ if [[ $# -gt 0 ]]; then
 
             h)  # Display help and usage info and exit
                 displayHelp;
+                ;;
+
+            m)  # Set mainstream repo name
+                [[ ! -z "$OPTARG" ]] && \
+                    MAINSTREAM=$OPTARG;
                 ;;
 
             p)  # Alternative path to patches

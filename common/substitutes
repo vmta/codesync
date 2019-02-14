@@ -14,11 +14,9 @@ s/8333/6333/g
 s/18333/16333/g
 s/BTC/UMK/g
 s/btc/umk/g
-s/2009, COPYRIGHT_YEAR/2017, COPYRIGHT_YEAR/g
-s/URL_WEBSITE = \"<https:\/\/bitcoincore/URL_WEBSITE = \"<http:\/\/umkoin/g
-s/COPYRIGHT_STR \"2009-\" STRINGIZE/COPYRIGHT_STR \"2017-\" STRINGIZE/g
 s/5wyqrzbvrdsumnok/klfchu53kxun6zx5/g
 s/arg(2009)/arg(2017)/g
+/COPYRIGHT_YEAR/ s/2009/2017/g
 # Set back the bitcoin...
 s/en.umkoin.it/en.bitcoin.it/g
 s/Umkoin Core devel/Bitcoin Core devel/g

@@ -2,7 +2,7 @@
 # PRESET VARIABLES
 ######################################################################
 
-# Default branch to "master"
+# Default branch
 BRANCH="master";
 
 # Default clone repository
@@ -12,13 +12,25 @@ CLONE="umkoin";
 MAINSTREAM="bitcoin";
 
 # Default editor
+#
+# Used in script(s):
+# - review
+#
 EDITOR="/usr/bin/gedit";
 
 # Various flags that may or shall
 # be updated when certain action
 # completes
 
-# On commit completion, set flag to 1
+# Enable/disable commit after sync via
+# command-line (set to 1 to enable).
+# On commit completion is increased to
+# 2 to signal garbage collector to clean
+# unnecessary patches.
+#
+# Used in script(s):
+# - sync
+#
 FLAG_COMMIT=0;
 
 # When requested via command-line, set
@@ -28,6 +40,10 @@ FLAG_DEBUG=0;
 # Get diffs patches only to the first
 # unsynced commit when set to 1, could
 # be overriden by command-line option
+#
+# Used in script(s):
+# - diffs
+#
 FLAG_FIRST_UNSYNCED=1;
 
 # When requested via command-line, set
@@ -38,13 +54,29 @@ FLAG_INTERACT=0;
 # When requested via command-line, set
 # this flag to 1 to enable pulling
 # in updates from the repositories
+#
+# Used in script(s):
+# - diffs
+#
 FLAG_PULL=0;
 
-# On push completion, set flag to 1
+# Enable/disable via command-line pushing
+# to remote server after sync and commit
+# (set to 1 to enable). On push completion
+# is increased to 2 to signal garbage
+# collector to clean unnecessary patches.
+#
+# Used in script(s):
+# - sync
+#
 FLAG_PUSH=0;
 
 # Enable/disable reading all patches
 # for review
+#
+# Used in script(s):
+# - review
+#
 FLAG_READALL=1;
 
 # On sync completion, set flag to 1
@@ -52,6 +84,10 @@ FLAG_SYNC=0;
 
 # Enable/disable single-file patch
 # creation mode
+#
+# Used in script(s):
+# - diffs
+#
 ONE_FILE_DIFF=0;
 
 # Enable/disable tracking remote

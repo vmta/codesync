@@ -23,6 +23,6 @@ Common(s):
       common functions that are (or may be) used across other
       scripts
 
-    - variables
-      holds default values for various variables used in the
+    - config
+      holds default values for various config used in the
       scripts

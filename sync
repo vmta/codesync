@@ -6,9 +6,23 @@
 # commit, with predefined or manually altered commit-subject, and,
 # if requested via script arguments, a push to the remote server.
 #
+# The script accepts arguments:
+# -b - get branch name to synchronize (default to master)
+# -c - enable commit after sync
+# -f - alternative path to single-file patch
+# -g - enable pushing to the remote server after sync and commit
+# -h - display help and usage info and exit
+# -p - alternative path to multi-file patches
+#
 # Author: Igor Gunia <vmta@yahoo.com>
-# Date:   2018-09-24
+# Date:   2019-02-14
 # Ver.:   0.2
+#
+# v.0.2   2019-02-14
+#         Minor cleanup
+#
+# v.0.1   2018-09-24
+#         Initial version
 #####################################################################
 
 
@@ -18,7 +32,7 @@
 #
 DIR="$( cd $( dirname ${BASH_SOURCE[0]} ) > /dev/null 2>&1 && pwd )";
 #
-source $DIR/common/variables;
+source $DIR/common/config;
 #
 PATCH_DIR="$DIR/git.diffs";
 PATCH_FILE="$DIR/git.diff";
@@ -45,17 +59,18 @@ displayHelp()
 {
 
     local STRING="Usage:\n
-                 $( basename $0 ) [b:cdghp:]\n\n
+                 $( basename $0 ) [b:cf:ghp:]\n\n
                  Options:\n
-                 -b \t Requires argument, a branch name (defaults\n
-                    \t to branch \"master\")\n
-                 -c \t Commit changes after synchronization; additionally\n
-                    \t push committed changes to the server if \"push\" is\n
-                    \t specified\n
+                 -b \t Requires argument, a branch name (default:\
+                       $BRANCH)\n
+                 -c \t Commit changes after synchronization\n
+                 -f \t Requires argument to set alternative\
+                       path to single-file patch (default:\
+                       $PATCH_FILE)\n
                  -g \t Push the committed changes to the server\n
                  -h \t Display this help and exit\n
-                 -p \t Requires argument to set alternative\n
-                    \t path to patches (default: $PATCH_DIR)\n";
+                 -p \t Requires argument to set alternative\
+                       path to patches (default: $PATCH_DIR)\n\n";
 
     echo -e $STRING;
 
@@ -69,9 +84,6 @@ displayHelp()
 #
 doSync()
 {
-
-#    local BRANCH=$1;
-
     pushd $CLONE;
     git checkout $BRANCH;
     popd;
@@ -81,10 +93,13 @@ doSync()
             patch -p1 < "$PATCH_DIR/$file" && \
                 rm "$PATCH_DIR/$file";
         done
+        rmdir $PATCH_DIR;
     elif [[ -f "$PATCH_FILE" ]]; then
         patch -p1 < "$PATCH_FILE" && \
-            rm "$PATCH_FILE";
+            rm $PATCH_FILE;
     fi
+
+    ((FLAG_SYNC++));
 }
 
 
@@ -129,11 +144,11 @@ doPush()
 #####################################################################
 # Function doClean
 #
-doClean()
-{
-    [[ -d $PATCH_DIR ]] && rmdir $PATCH_DIR;
-    [[ -f $PATCH_FILE ]] && rm $PATCH_FILE;
-}
+#doClean()
+#{
+#    [[ -d $PATCH_DIR ]] && rmdir $PATCH_DIR;
+#    [[ -f $PATCH_FILE ]] && rm $PATCH_FILE;
+#}
 #####################################################################
 
 
@@ -142,47 +157,40 @@ doClean()
 # Cycle through them.
 if [ $# -gt 0 ]; then
 
-    # Cycle through options
-    # -b requires an argument (branch name, defaults to master)
-    # -c accepts no arguments
-    # -g accepts no arguments
-    # -h accepts no arguments
-    # -p requires an argument (PATH)
-    #
-    while getopts "b:cdf:ghp:" opt; do
+    while getopts "b:cf:ghp:" opt; do
 
         case "$opt" in
 
-            b)  # Set branch name
-                [[ ! -z "$OPTARG" ]] && \
-                    BRANCH=$OPTARG;
-                ;;
+            b) # Set branch name
+               [[ ! -z "$OPTARG" ]] && \
+                   BRANCH=$OPTARG;
+               ;;
 
-            c)  # Enable commit after sync
-                FLAG_COMMIT=1;
-                ;;
+            c) # Enable commit after sync
+               FLAG_COMMIT=1;
+               ;;
 
-            f)  # Alternative path to patch-file
-                [[ -f $OPTARG ]] && \
-                    PATCH_FILE=$OPTARG;
-                ;;
+            f) # Alternative path to patch-file
+               [[ -f $OPTARG ]] && \
+                   PATCH_FILE=$OPTARG;
+               ;;
 
-            g)  # Push commit
-                FLAG_PUSH=1;
-                ;;
+            g) # Enable push after sync and commit
+               FLAG_PUSH=1;
+               ;;
 
-            h)  # Display help and usage info and exit
-                displayHelp;
-                ;;
+            h) # Display help and usage info and exit
+               displayHelp;
+               ;;
 
-            p)  # Alternative path to patches
-                [[ -d $OPTARG ]] && \
-                    PATCH_DIR=$OPTARG;
-                ;;
+            p) # Alternative path to patches
+               [[ -d $OPTARG ]] && \
+                   PATCH_DIR=$OPTARG;
+               ;;
 
-            default) # Option is omitted, display usage info
-                displayHelp;
-                ;;
+            *) # Option is omitted, display usage info
+               displayHelp;
+               ;;
 
         esac
 
@@ -191,28 +199,29 @@ if [ $# -gt 0 ]; then
     # PERFORM SOME ACTION
 
     #####
-    # Check if PATCH_DIR has patches and sync, or just skip.
+    # Check if PATCH_DIR has patches or PATCH_FILE exists
+    # and sync, or just exit.
     #
     if [[ -d $PATCH_DIR && ! -z "$( ls -A $PATCH_DIR )" || -f $PATCH_FILE ]]; then
         doSync;
+    else
+        exit 1;
     fi
 
     #####
     # Check if we shall commit and act appropriately.
     #
-    [[ $FLAG_COMMIT -eq 1 ]] && doCommit;
+    [[ $FLAG_COMMIT -eq 1 && $FLAG_SYNC -eq 1 ]] && doCommit;
 
     #####
     # Check if we shall push the commit and act accordingly.
     #
-    [[ $FLAG_PUSH -eq 1 ]] && doPush;
+    [[ $FLAG_PUSH -eq 1 && $FLAG_COMMIT -eq 2 ]] && doPush;
 
     #####
     # Check if we shall clean up after successful commit or push.
     #
-    if [[ $FLAG_COMMIT -eq 2 && $FLAG_PUSH -eq 2 ]]; then
-        doClean;
-    fi
+#    [[ $FLAG_COMMIT -eq 2 && $FLAG_PUSH -eq 2 ]] && doClean;
 
 else
     displayHelp;
