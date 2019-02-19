@@ -44,7 +44,7 @@ source $DIR/common/config;
 FILES=();
 PATCH_DIR="$DIR/git.diffs";
 PATCH_FILE="$DIR/git.diff";
-SUBST="$DIR/common/substitutes";
+SUBST=("$DIR/common/substitutes" "$DIR/common/substitutes.diff");
 VERSION="0.1";
 #####################################################################
 
@@ -286,10 +286,13 @@ if [[ $# -gt 0 ]]; then
                     mkdir "$( dirname $DIR/$CLONE/${FILES[-1]} )";
                 touch "$DIR/$CLONE/${FILES[-1]}";
             fi
-            git diff "../$CLONE/${FILES[-1]}" $FILE | \
-                sed -f $SUBST | \
-                sed '/^diff --git*/ s/ a\/..\// a\//' | \
-                sed '/^--- a*/ s/ a\/..\// a\//' > $DEST;
+
+            sed -i -f ${SUBST[0]} $FILE;
+            git diff "../$CLONE/${FILES[-1]}" $FILE | sed -f ${SUBST[1]} > $DEST;
+#            git diff "../$CLONE/${FILES[-1]}" $FILE | \
+##                sed '1,4 s/\(.*\s\)\(a\/\.\.\)\(.*\s\)\(b\/\)\(.*\)/\1a\3\4bitcoin\/\5/' > $DEST;
+##                sed '/^diff --git/ s/\(.*\s\)\(a\/\.\.\)\(.*\s\)\(b\/\)\(.*\)/\1a\3\4bitcoin\/\5/' | \
+##                sed '/^--- a/ s/ a\/..\// a\//; /^+++ b/ s/ b\// b\/bitcoin\//' > $DEST;
 
             # check if created diff is empty and remove,
             # otherwise leave it intact
