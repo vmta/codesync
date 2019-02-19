@@ -1,42 +1,91 @@
 # Set forth the umkoin...
-s/БІТКО/УМКО/g
-s/Бітко/Умко/g
-s/бітко/умко/g
-s/БИТКО/УМКО/g
-s/Битко/Умко/g
-s/битко/умко/g
+# General cases, nothing to preserve
+s/БІТКО/УМКО/g; s/Бітко/Умко/g; s/бітко/умко/g
+s/БИТКО/УМКО/g; s/Битко/Умко/g; s/битко/умко/g
 s/BITCOIN/UMKOIN/g
-s/Bitcoin/Umkoin/g
-s/bitcoin/umkoin/g
-s/bitcon/umkon/g
-s/8332/6332/g
-s/8333/6333/g
-s/18333/16333/g
-s/BTC/UMK/g
-s/btc/umk/g
+s/BTC/UMK/g; s/btc/umk/g
+
+# Change link to Umkoin-Core project on Transifex
+/\[Transifex\]/ s/projects\/p\/bitcoin/umkoin\/umkoin-core/
+
+# Remove several lines concerning security and
+# update notifications
+/To receive security and update notifications/,+3d
+
+# Change Bitcoin to Umkoin, but preserve
+# - Bitcoin Core devel
+/Bitcoin Core devel/! s/Bitcoin/Umkoin/g
+
+# Change bitcoin to umkoin, but preserve
+# - bitcoin-core
+# - bitcoincore
+# - bitcoin.stackexchange
+# - bitcointalk
+# - bitcoin/bips
+# - doxygen
+# - en.bitcoin.it
+/bitcoin-core/!{
+/bitcoincore/!{
+/bitcoin.stackexchange/!{
+/bitcointalk/!{
+/bitcoin\/bips/!{
+/doxygen/!{
+/en.bitcoin.it/! s/bitcoin/umkoin/g}}}}}}
+
+# Change ports 8332 to 6332, 8333 to 6333, 18333 to 16333
+# but preserve any other combination of alphanumeric
+# sequences with angle brackets
+/\<833[23]\>/ y/8/6/
+
+# Change tor onion address
 s/5wyqrzbvrdsumnok/klfchu53kxun6zx5/g
+
+# Change the initial copyright date from 2009 to 2017
 s/arg(2009)/arg(2017)/g
 /COPYRIGHT_YEAR/ s/2009/2017/g
+
 # Set back the bitcoin...
-s/en.umkoin.it/en.bitcoin.it/g
-s/Umkoin Core devel/Bitcoin Core devel/g
-s/umkoin-core\//bitcoin-core\//g
-s/umkoincore.org/bitcoincore.org/g
-s/umkoin.stackexchange/bitcoin.stackexchange/g
-s/umkointalk.org/bitcointalk.org/g
-s/umkoin\/bips\/blob\//bitcoin\/bips\/blob\//g
+#s/en.umkoin.it/en.bitcoin.it/g
+
 s/umkoin\/umkoin\/blob\//bitcoin\/bitcoin\/blob\//g
 s/umkoin\/umkoin\/issues\//bitcoin\/bitcoin\/issues\//g
 s/umkoin\/umkoin\/pull\//bitcoin\/bitcoin\/pull\//g
+
 # Set forth the umkoin in special cases...
-s/bitcoincore.org\/cfields/umkoin.org\/cfields/g
-/URL_WEBSITE/ s/https\:\/\/bitcoincore/http\:\/\/www.umkoin/
-s/github.com\/bitcoin-core\/gitian.sigs/github.com\/umkoin\/gitian.sigs/g
-s/github.com\/bitcoin-core\/umkoin/github.com\/umkoin\/umkoin/g
+
+# Change bitcoin-core to umkoin provided that it is used
+# in conjunction with the github.com, but preserve
+# - secp256k1
+# - ctaes
+# - univalue
+/github.com/{/secp256k1/!{/ctaes/!{/univalue/! s/bitcoin-core/umkoin/g}}}
+
+# Change bitcoincore to www.umkoin provided that it is used
+# in conjunction with
+# - download link, and change the link to download.php as well
+# - cfields link
+# - *version*
+# - AC_INIT
+# - URL_WEBSITE
+/\/download\// s/bitcoincore/www.umkoin/g
+/\/download\// s/\/download\//\/download.php/g
+/\/cfields\// s/bitcoincore/www.umkoin/g
+/\*version\*/ s/bitcoincore/www.umkoin/
+/\*version\*/ s/bitcoin-core/umkoin-core/
+/AC_INIT/ s/bitcoincore/www.umkoin/g
+/URL_WEBSITE/ s/bitcoincore/www.umkoin/g
+
+#s/github.com\/bitcoin-core\/gitian.sigs/github.com\/umkoin\/gitian.sigs/g
+#s/github.com\/bitcoin-core\/umkoin/github.com\/umkoin\/umkoin/g
+
 # Genesis block takeover
 s/04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38c4f35504e51ec112de5c384df7ba0b8d578a4c702b6bf11d5f/04880766d2f2a4f8e8a2ca8ef5f6baf014f2ac460acc69604df1af697ec9cd9d01548a7d6015e0cabfcbc160316143d9aae4a17c944f611b8daf18fb1492935d67/g
 s/04 67 8a fd b0/04 88 07 66 d2/g
 # Diff git
-/^diff --git*/ s/ b\// b\/bitcoin\//
-/^+++ b*/ s/ b\// b\/bitcoin\//
-/^+++ b*/ s/umkoin/bitcoin/g
+#/^diff --git*/ s/ b\// b\/bitcoin\//
+#/^+++ b*/{/b\/bitcoin\//! s/ b\// b\/bitcoin\//}
+#/^+++ b*/ s/umkoin/bitcoin/g
+
+
+# Change protocol https to http wherever our site is mentioned
+/umkoin.org/ s/https\:/http\:/g
