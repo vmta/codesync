@@ -150,22 +150,56 @@ function getCurrentBranch()
 
 
 #####################################################################
+# Function getCurrentRepo
+#
+# Return a string containing the name of the current repository only
+# if it is one of the CLONE or MAINSTREAM.
+#
+function getCurrentRepo()
+{
+    local REPO=$( pwd | awk -F'/' '{ print $NF }' );
+    [[ "$CLONE $MAINSTREAM" =~ "$REPO" ]] && \
+        echo $REPO;
+}
+
+
+#####################################################################
+# Function updateRepoAuto
+#
+# Assume we're inside repo dir and an update to current branch is
+# requested if no arguments provided, otherwise update to specified
+# branch.
+#
+function updateRepoAuto()
+{
+    local BRANCH="";
+
+    [[ -z "$1" ]] && \
+        BRANCH=getCurrentBranch || \
+        BRANCH=$1;
+
+    git pull origin $BRANCH > /dev/null 2>&1;
+}
+
+
+#####################################################################
 # Function updateRepo
 #
-# Two optional argument could be provided. A branch name of local
-# repo and log file path/name. If second arg is not provided, send
-# all output into /dev/null. If no arguments provided, then assume
-# an update to current branch is requested.
+# Double check if the user wants to pull updates to a repository.
 #
 function updateRepo()
 {
     local BRANCH="";
 
-    [ -z "$1" ] && \
-        BRANCH=$( git branch | grep \* | tr -d '\*|[:blank:]' ) || \
+    [[ -z "$1" ]] && \
+        BRANCH=getCurrentBranch || \
         BRANCH=$1;
 
-    git pull origin $BRANCH > /dev/null 2>&1;
+    read -p "Would you like to pull updates to "$( getCurrentRepo )"? [Y/N]: " QUEST;
+    case $QUEST in
+        [Yy]|[Yy][Ee]][Ss]) updateRepoAuto $BRANCH;
+        ;;
+    esac
 }
 
 
@@ -176,7 +210,7 @@ function updateRepo()
 #
 function rewindRepo()
 {
-    if [[ $? -gt 1  && $1 -gt 0 ]]; then
+    if [[ $? -gt 1 && $1 -gt 0 ]]; then
         git reset --hard HEAD~$1;
     fi
 }
