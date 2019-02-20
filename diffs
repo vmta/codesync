@@ -21,8 +21,13 @@
 # information with immediate execution abortion.
 #
 # Author: Igor Gunia <vmta@yahoo.com>
-# Date:   2019-02-14
-# Ver.:   0.2
+# Date:   2019-02-20
+# Ver.:   0.3
+#
+# v.0.3   2019-02-20
+#         Implement double checking on user request to pull updates
+#         to repositories. Is triggered upon provision of -u to the
+#         script
 #
 # v.0.2   2019-02-14
 #         Allow command-line arguments "c", for specifying CLONE
@@ -121,6 +126,7 @@ function displayHelp()
 #####################################################################
 # Interaction is requested.
 # Provide some interactivity.
+#
 function interact()
 {
     read -p "Would you like to review patches? [Y/N] " QA;
@@ -147,6 +153,7 @@ function interact()
 #####################################################################
 # Check if script is called with arguments.
 # Cycle through them.
+#
 if [[ $# -gt 0 ]]; then
 
     while getopts "ab:c:him:p:uv" opt; do
@@ -209,8 +216,7 @@ if [[ $# -gt 0 ]]; then
     [[ -d "$DIR/$CLONE" ]] || exit 1;
     pushd $DIR/$CLONE;
     git checkout -f $BRANCH;
-    [[ $FLAG_PULL -eq 1 ]] && \
-        git pull origin $BRANCH > /dev/null 2>&1;
+    [[ $FLAG_PULL -eq 1 ]] && updateRepo;
     LAST_SYNCED=$( getLastSyncedCommit );
     popd;
 
@@ -236,8 +242,7 @@ if [[ $# -gt 0 ]]; then
     [ -d "$DIR/$MAINSTREAM" ] || exit 2;
     pushd $DIR/$MAINSTREAM;
     git checkout -f $BRANCH;
-    [[ $FLAG_PULL -eq 1 ]] && \
-        git pull origin $BRANCH > /dev/null 2>&1;
+    [[ $FLAG_PULL -eq 1 ]] && updateRepo;
 
     if [ $FLAG_FIRST_UNSYNCED -eq 1 ]; then
         UNSYNCED=$( getFirstUnsyncedCommit $LAST_SYNCED );
@@ -246,19 +251,19 @@ if [[ $# -gt 0 ]]; then
         UNSYNCED="HEAD";
     fi
 
-    if [ $ONE_FILE_DIFF -eq 1 ]; then
-        git diff $LAST_SYNCED $UNSYNCED | \
-            sed -f $SUBST | \
-            sed '/^diff --git*/ s/ a\// a\/'$CLONE'\//' | \
-            sed '/^--- a*/ s/ a\// a\/'$CLONE'\//' > $PATCH_FILE;
-        [[ -f $PATCH_FILE && ! -s $PATCH_FILE ]] && \
-            rm $PATCH_FILE || \
-            printf "Diff file: %s will patch %d files.\n" \
-                    $PATCH_FILE \
-                    $( git diff --name-only $LAST_SYNCED $UNSYNCED | \
-                    wc -l );
-        [ $FLAG_INTERACT -gt 0 ] && interact;
-    else
+#    if [ $ONE_FILE_DIFF -eq 1 ]; then
+#        git diff $LAST_SYNCED $UNSYNCED | \
+#            sed -f $SUBST | \
+#            sed '/^diff --git*/ s/ a\// a\/'$CLONE'\//' | \
+#            sed '/^--- a*/ s/ a\// a\/'$CLONE'\//' > $PATCH_FILE;
+#        [[ -f $PATCH_FILE && ! -s $PATCH_FILE ]] && \
+#            rm $PATCH_FILE || \
+#            printf "Diff file: %s will patch %d files.\n" \
+#                    $PATCH_FILE \
+#                    $( git diff --name-only $LAST_SYNCED $UNSYNCED | \
+#                    wc -l );
+#        [ $FLAG_INTERACT -gt 0 ] && interact;
+#    else
         for FILE in $( git diff --name-only $LAST_SYNCED $UNSYNCED ); do
 
             # Test if FILE was removed from the MAINSTREAM
@@ -289,10 +294,6 @@ if [[ $# -gt 0 ]]; then
 
             sed -i -f ${SUBST[0]} $FILE;
             git diff "../$CLONE/${FILES[-1]}" $FILE | sed -f ${SUBST[1]} > $DEST;
-#            git diff "../$CLONE/${FILES[-1]}" $FILE | \
-##                sed '1,4 s/\(.*\s\)\(a\/\.\.\)\(.*\s\)\(b\/\)\(.*\)/\1a\3\4bitcoin\/\5/' > $DEST;
-##                sed '/^diff --git/ s/\(.*\s\)\(a\/\.\.\)\(.*\s\)\(b\/\)\(.*\)/\1a\3\4bitcoin\/\5/' | \
-##                sed '/^--- a/ s/ a\/..\// a\//; /^+++ b/ s/ b\// b\/bitcoin\//' > $DEST;
 
             # check if created diff is empty and remove,
             # otherwise leave it intact
@@ -322,10 +323,9 @@ if [[ $# -gt 0 ]]; then
 
             [ $FLAG_INTERACT -gt 0 ] && interact;
         else
-            printf "No patches necessary, repositories seem to be in\
-                  sync.\n";
+            echo "No patches necessary, repositories seem to be in sync.";
         fi
-    fi
+#    fi
     popd;
 
 else
