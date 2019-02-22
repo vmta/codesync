@@ -175,7 +175,7 @@ function updateRepoAuto()
     local BRANCH="";
 
     [[ -z "$1" ]] && \
-        BRANCH=getCurrentBranch || \
+        BRANCH=$( getCurrentBranch ) || \
         BRANCH=$1;
 
     git pull origin $BRANCH > /dev/null 2>&1;
@@ -192,12 +192,12 @@ function updateRepo()
     local BRANCH="";
 
     [[ -z "$1" ]] && \
-        BRANCH=getCurrentBranch || \
+        BRANCH=$( getCurrentBranch ) || \
         BRANCH=$1;
 
     read -p "Would you like to pull updates to "$( getCurrentRepo )"? [Y/N]: " QUEST;
     case $QUEST in
-        [Yy]|[Yy][Ee]][Ss]) updateRepoAuto $BRANCH;
+        [Yy]|[Yy][Ee][Ss]) updateRepoAuto $BRANCH;
         ;;
     esac
 }
