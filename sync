@@ -204,6 +204,10 @@ if [ $# -gt 0 ]; then
     #
     if [[ -d $PATCH_DIR && ! -z "$( ls -A $PATCH_DIR )" || -f $PATCH_FILE ]]; then
         doSync;
+    elif [[ $FLAG_PUSH -eq 1 && $( isPushable ) -gt 0 ]]; then
+        # Check if FLAG_PUSH is set and local branch tree
+        # is ahead of the remote origin.
+        doPush;
     else
         exit 1;
     fi
@@ -217,11 +221,6 @@ if [ $# -gt 0 ]; then
     # Check if we shall push the commit and act accordingly.
     #
     [[ $FLAG_PUSH -eq 1 && $FLAG_COMMIT -eq 2 ]] && doPush;
-
-    #####
-    # Check if we shall clean up after successful commit or push.
-    #
-#    [[ $FLAG_COMMIT -eq 2 && $FLAG_PUSH -eq 2 ]] && doClean;
 
 else
     displayHelp;

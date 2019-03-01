@@ -214,3 +214,21 @@ function rewindRepo()
         git reset --hard HEAD~$1;
     fi
 }
+
+
+#####################################################################
+# Function isPushable
+#
+# Check whether CLONE was already synced and changes commited
+# so that only push would be necessary.
+#
+# Consider this, repository may or may not be on the requested
+# branch, thus performing soft checkout.
+#
+function isPushable()
+{
+    pushd $CLONE;
+    git checkout $BRANCH > /dev/null 2>&1;
+    [[ $( git rev-list --left-right --count $BRANCH...origin/$BRANCH | awk '{ print $1 }' ) -gt 0 ]] && echo "1" || echo "0";
+    popd;
+}
