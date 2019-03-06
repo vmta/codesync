@@ -131,7 +131,7 @@ function interact()
 {
     read -p "Would you like to review patches? [Y/N] " QA;
     if [[ "$QA" =~ ^[Yy]$ ]]; then
-        [ $ONE_FILE_DIFF -eq 0 ] && \
+        [[ $ONE_FILE_DIFF -eq 0 ]] && \
             "$DIR/review" -r all -b $BRANCH -p $PATCH_DIR || \
             "$DIR/review" -r all -b $BRANCH -f $PATCH_FILE;
     else
@@ -141,7 +141,7 @@ function interact()
         else
             read -p "Would you like to remove patches? [Y/N] " QA;
             if [[ "$QA" =~ ^[Yy]$ ]]; then
-                [ $ONE_FILE_DIFF -eq 0 ] && \
+                [[ $ONE_FILE_DIFF -eq 0 ]] && \
                     rm -fr $PATCH_DIR || \
                     rm -f $PATCH_FILE;
             fi
@@ -239,12 +239,12 @@ if [[ $# -gt 0 ]]; then
     #   (false)  get list of changed files between the last synced
     #            and first unsynced commits, auto-rename if needed,
     #            and get per-file-patches.
-    [ -d "$DIR/$MAINSTREAM" ] || exit 2;
+    [[ -d "$DIR/$MAINSTREAM" ]] || exit 2;
     pushd $DIR/$MAINSTREAM;
     git checkout -f $BRANCH;
     [[ $FLAG_PULL -eq 1 ]] && updateRepo;
 
-    if [ $FLAG_FIRST_UNSYNCED -eq 1 ]; then
+    if [[ $FLAG_FIRST_UNSYNCED -eq 1 ]]; then
         UNSYNCED=$( getFirstUnsyncedCommit $LAST_SYNCED );
         git reset --hard $UNSYNCED > /dev/null 2>&1;
     else
@@ -268,7 +268,7 @@ if [[ $# -gt 0 ]]; then
 
             # Test if FILE was removed from the MAINSTREAM
             # clean from CLONE and skip to next FILE
-            if [ ! -f $FILE ]; then
+            if [[ ! -f $FILE ]]; then
                 rm $DIR/$CLONE/$( echo $FILE | \
                     sed 's/'$MAINSTREAM'/'$CLONE'/g' ) > \
                     /dev/null 2>&1;
@@ -277,17 +277,17 @@ if [[ $# -gt 0 ]]; then
 
             FILES+=( $( echo $FILE | sed 's/'$MAINSTREAM'/'$CLONE'/g' ) );
 
-            [ ! -d $PATCH_DIR ] && mkdir $PATCH_DIR;
+            [[ ! -d $PATCH_DIR ]] && mkdir $PATCH_DIR;
             DEST="$PATCH_DIR/$( echo ${FILES[-1]##*/} )";
             # as it happens, there could be several files by the
             # same name, therefore, need to preserve already created
             # patches from overwriting
-            [ -f $DEST ] && DEST="$DEST.$( tr -cd '[:alnum:]' < \
+            [[ -f $DEST ]] && DEST="$DEST.$( tr -cd '[:alnum:]' < \
                                   /dev/urandom | \
                                   fold -w 8 | \
                                   head -n 1 )";
-            if [ ! -f "$DIR/$CLONE/${FILES[-1]}" ]; then
-                [ ! -d "$( dirname $DIR/$CLONE/${FILES[-1]} )" ] && \
+            if [[ ! -f "$DIR/$CLONE/${FILES[-1]}" ]]; then
+                [[ ! -d "$( dirname $DIR/$CLONE/${FILES[-1]} )" ]] && \
                     mkdir "$( dirname $DIR/$CLONE/${FILES[-1]} )";
                 touch "$DIR/$CLONE/${FILES[-1]}";
             fi
@@ -312,16 +312,16 @@ if [[ $# -gt 0 ]]; then
                     ${#FILES[@]}\
                     $MAINSTREAM\
                     $CLONE;
-        elif [ -d $PATCH_DIR ]; then
+        elif [[ -d $PATCH_DIR ]]; then
             printf "Files changed :\t%d\n" ${#FILES[@]};
-            [ $FLAG_DEBUG -gt 0 ] && \
+            [[ $FLAG_DEBUG -gt 0 ]] && \
                 printf "              :\t%s\n" ${FILES[@]};
             printf "Files to patch:\t%d\n" $( ls -A $PATCH_DIR | \
                                            wc -l );
-            [ $FLAG_DEBUG -gt 0 ] && \
+            [[ $FLAG_DEBUG -gt 0 ]] && \
                 printf "              :\t%s\n" $( ls -A $PATCH_DIR );
 
-            [ $FLAG_INTERACT -gt 0 ] && interact;
+            [[ $FLAG_INTERACT -gt 0 ]] && interact;
         else
             echo "No patches necessary, repositories seem to be in sync.";
         fi
