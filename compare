@@ -1,0 +1,112 @@
+#!/usr/bin/env bash
+
+
+CLONE=${1:-"umkoin"};
+MAINSTREAM=${2:-"bitcoin"};
+
+CLEANUP=${3:-"n"};
+CREATE=${4:-"n"};
+
+function getFile()
+{
+    local aPATH=$1;
+    if [[ -d "${aPATH}" ]]; then
+        for FILE in $( find ${aPATH} -type f -not \( -path '*/.git/*' -prune \) )
+        do
+            echo $FILE;
+        done
+    fi
+}
+
+function getDir()
+{
+    local aPATH=${1:-$( pwd )};
+    if [[ -d "${aPATH}" ]]; then
+        for DIR in $( find ${aPATH} -type d -not \( -path '*/.git/*' -prune \) )
+        do
+            echo $DIR;
+        done
+    fi
+}
+
+function mangleNameAB()
+{
+    local NAME=$1;
+    local A=${2:-$CLONE};
+    local B=${3:-$MAINSTREAM};
+    if [[ ! -z "${FILE}" ]]; then
+        echo $NAME | sed 's/'${A}'/'${B}'/g';
+    fi
+}
+
+CFILES=($( getFile $CLONE ));
+CDIRS=($( getDir $CLONE ));
+
+MFILES=($( getFile $MAINSTREAM ));
+MDIRS=($( getDir $MAINSTREAM ));
+
+COUNT=0;
+DELETED=0;
+CREATED=0;
+for FILE in ${CFILES[@]}
+do
+    MANGLED_FILE=$( mangleNameAB $FILE $CLONE $MAINSTREAM );
+    if [[ -s $FILE && ! -s $MANGLED_FILE ]]; then
+        echo "$( stat -c %y $FILE ) $FILE has no equiv";
+
+        if [[ "$CLEANUP" == "y" ]]; then
+            read -p "Delete $FILE? [Y/N]: " QA;
+            if [[ "$QA" =~ [Yy] ]]; then
+                rm $FILE;
+                [[ $? ]] && ((DELETED++));
+            fi
+        fi
+
+        if [[ "$CREATE" == "y" ]]; then
+            read -p "Create $MANGLED_FILE [Y/N]: " QA;
+            if [[ "$QA" =~ [Yy] ]]; then
+                touch $MANGLED_FILE;
+                [[ $? ]] && ((CREATED++));
+                git diff $MANGLED_FILE $FILE > a${CREATED}
+            fi
+        fi
+        ((++COUNT));
+    fi
+done
+
+echo "Of $COUNT files excessive, $DELETED were deleted, $CREATED were created";
+echo "Total $CLONE files: ${#CFILES[@]}";
+echo "Total $MAINSTREAM files: ${#MFILES[@]}";
+
+COUNT=0;
+DELETED=0;
+for DIR in ${CDIRS[@]}
+do
+    MANGLED_DIR=$( mangleNameAB $DIR $CLONE $MAINSTREAM );
+    if [[ -d $DIR && ! -d $MANGLED_DIR ]]; then
+        echo "$( stat -c %y $DIR ) $DIR has no equiv";
+
+        if [[ "$CLEANUP" == "y" ]]; then
+            read -p "Delete $DIR? [Y/N]: " QA;
+            if [[ "$QA" =~ [Yy] ]]; then
+                rm -fr $DIR;
+                [[ $? ]] && ((DELETED++));
+            fi
+        fi
+
+        if [[ "$CREATE" == "y" ]]; then
+            read -p "Create $MANGLED_DIR [Y/N]: " QA;
+            if [[ "$QA" =~ [Yy] ]]; then
+                mkdir $MAGLED_DIR;
+                [[ $? ]] && ((CREATED++));
+            fi
+        fi
+        ((++COUNT));
+    fi
+done
+
+echo "Of $COUNT folders excessive, $DELETED were deleted, $CREATED were created";
+echo "Total $CLONE folders: ${#CDIRS[@]}";
+echo "Total $MAINSTREAM folders: ${#MDIRS[@]}";
+
+exit $?
