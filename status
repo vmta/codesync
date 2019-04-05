@@ -7,16 +7,34 @@
 # after this pull.
 #
 # The script accepts arguments:
-# -b - get branch name to compare repos (defaults to master)
-# -c - get cloned repository name (should be locally accessible)
-# -h - display help and usage info and exit
-# -m - get mainstream repository name (should be locally accessible)
-# -u - requires no arguments, will pull updates
-# -v - set verbosity level
+#
+# -b or --branch
+# get branch name to compare repos (defaults to master)
+#
+# -c or --clone
+# get cloned repository name (should be locally accessible)
+#
+# -h or --help
+# display help and usage info and exit
+#
+# -m or --mainstream
+# get mainstream repository name (should be locally accessible)
+#
+# -u or --update
+# requires no arguments, will pull updates
+#
+# -v or --verbose
+# set verbosity level
 #
 # Author: Igor Gunia <vmta@yahoo.com>
-# Date:   2019-01-21
-# Ver.:   0.1
+# Date:   2019-04-05
+# Ver.:   0.2
+#
+# v.0.2   2019-04-05
+#         Include long form of options
+#
+# v.0.1   2019-01-21
+#         Initial version
 #####################################################################
 
 
@@ -29,7 +47,7 @@ DIR="$( cd $( dirname ${BASH_SOURCE[0]} ) > /dev/null 2>&1 && pwd )";
 source $DIR/common/config;
 #
 REPOS=($CLONE $MAINSTREAM);
-VERSION="0.1";
+VERSION="0.2";
 #####################################################################
 
 
@@ -53,35 +71,34 @@ function displayHelp()
     local STRING="Script $( basename $0 ) version $VERSION\n
                  Usage:\n
                    $( basename $0 ) [b:c:hm:uv]\n\n
-                 Options:\n
-                   -b \t Requires branch name. Defaults to\
-                         \"master\".\n
-                   -c \t Requires cloned repository name. The name\
-                         should be locally accessible (short name,\
-                         i.e. umkoin, bitcoin, etc).\n
-                   -h \t Requires no argument, display help info and\
-                         exit\n
-                   -m \t Requires mainstream repository name. The\
-                         name should be locally accessible (short\
-                         name, i.e. umkoin, bitcoin, etc).\n
-                   -u \t Requires no argument, pull updates to repos,\
-                         then report their status. If unspecified\
-                         repos are not updated prior to reporting\
-                         status.\n
-                   -v \t Requires no argument, when specified,\
-                         produces broader logs.\n\n
+                 Options:\n\n
+                   -b or --branch\n
+                      \t Requires branch name. Defaults to \"master\".\n\n
+                   -c or --clone\n
+                      \t Requires cloned repository name. The name should be locally accessible\n
+                      \t (short name, i.e. umkoin, bitcoin, etc), can be.\n\n
+                   -h or --help\n
+                      \t Requires no argument, display help info and exit.\n\n
+                   -m or --mainstream\n
+                      \t Requires mainstream repository name. The name should be locally\n
+                      \t accessible (short name, i.e. umkoin, bitcoin, etc).\n\n
+                   -u or --update\n
+                      \t Requires no argument, pull updates to repos, then report their status.\n
+                      \t If unspecified repos are not updated prior to reporting status.\n\n
+                   -v or --verbose\n
+                      \t Requires no argument, when specified, produces broader logs.\n\n
                  Example:\n\n
                    $( basename $0 ) -u\
                                     -c umkoin\
                                     -m bitcoin\
                                     -b master\
                                     -v\n\n
-                 On completion, the status for both repositories will\
-                 bo shown after pulling respective updates.\n";
+                 On completion, the status for both repositories will be shown after pulling\n
+                 respective updates.\n";
 
     echo -e $STRING | more;
 
-    exit 1;
+    exit 0;
 }
 #####################################################################
 
@@ -120,8 +137,8 @@ function compareRepo()
     # 4. List of SHA1 commits starting from the latest
     # 5. Total number of commits the clone is behind mainstream
 
-    echo "Mainstream is at $M_HEAD";
-    echo "Clone is synced to $C_HEAD";
+    echo "$MAIN $BRANCH is at $M_HEAD";
+    echo "$CLONE $BRANCH is synced to $C_HEAD";
     [ ! -z $( getFirstUnsyncedCommit $C_HEAD ) ] && \
         echo "First unsynced commit is $( getFirstUnsyncedCommit $C_HEAD )";
 
@@ -150,42 +167,68 @@ function compareRepo()
 # Cycle through them.
 if [[ $# -gt 0 ]]; then
 
-    while getopts "b:c:hm:uv" opt; do
-        case $opt in
+    OPTIONS=$( getopt \
+               --options b:,c:,h,m:,u,v \
+               --longoptions branch: \
+               --longoptions clone: \
+               --longoptions help \
+               --longoptions mainstream: \
+               --longoptions update \
+               --longoptions verbose \
+               --name "$( basename "$0" )" \
+               -- "$@" );
 
-            b)  # Set branch name
-                [[ ! -z "$OPTARG" ]] && \
-                    BRANCH=$OPTARG;
-                ;;
+    eval set -- $OPTIONS;
 
-            c)  # Set cloned repo name
-                [[ ! -z "$OPTARG" ]] && \
-                    REPOS[0]=$OPTARG;
-                ;;
+    while true
+    do
+        case "$1" in
 
-            h)  # Display help and usage info and exit
-                displayHelp;
-                ;;
+            -b|--branch)
+              # Set branch name
+              [[ ! -z "$2" ]] && \
+                  BRANCH=$2;
+              shift;
+              ;;
 
-            m)  # Set mainstream repo name
-                [[ ! -z "$OPTARG" ]] && \
-                    REPOS[1]=$OPTARG;
-                ;;
+            -c|--clone)
+              # Set cloned repo name
+              [[ ! -z "$2" ]] && \
+                  REPOS[0]=$2;
+              shift;
+              ;;
 
-            u)  # Set FLAG_PULL
-                FLAG_PULL=1;
-                ;;
+            -h|--help)
+              # Display help and usage info and exit
+              displayHelp;
+              ;;
 
-            v)  # Set DEBUG
-                ((FLAG_DEBUG++));
-                ;;
+            -m|--mainstream)
+              # Set mainstream repo name
+              [[ ! -z "$2" ]] && \
+                  REPOS[1]=$2;
+              shift;
+              ;;
 
-            default) # Option is omitted
-                     # Display help and usage info and exit
-                displayHelp;
-                ;;
+            -u|--update)
+              # Set FLAG_PULL
+              FLAG_PULL=1;
+              ;;
+
+            -v|--verbose)
+              # Set DEBUG
+              ((FLAG_DEBUG++));
+              ;;
+
+            --)
+              shift;
+              break;
+              ;;
 
         esac
+
+        shift;
+
     done
 
     # PERFORM SOME ACTION

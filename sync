@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 #####################################################################
 # The purpose of this script is to provide synchronization hub which
@@ -7,16 +7,31 @@
 # if requested via script arguments, a push to the remote server.
 #
 # The script accepts arguments:
-# -b - get branch name to synchronize (default to master)
-# -c - enable commit after sync
-# -f - alternative path to single-file patch
-# -g - enable pushing to the remote server after sync and commit
-# -h - display help and usage info and exit
-# -p - alternative path to multi-file patches
+#
+# -b or --branch
+# get branch name to synchronize (default to master)
+#
+# -c or --commit
+# enable commit after sync
+#
+# -f or --patchfile
+# alternative path to single-file patch
+#
+# -g or --push
+# enable pushing to the remote server after sync and commit
+#
+# -h or --help
+# display help and usage info and exit
+#
+# -p or --patchdir
+# alternative path to multi-file patches
 #
 # Author: Igor Gunia <vmta@yahoo.com>
-# Date:   2019-02-14
-# Ver.:   0.2
+# Date:   2019-04-05
+# Ver.:   0.3
+#
+# v.0.3   2019-04-05
+#         Include long form of options
 #
 # v.0.2   2019-02-14
 #         Minor cleanup
@@ -36,7 +51,7 @@ source $DIR/common/config;
 #
 PATCH_DIR="$DIR/git.diffs";
 PATCH_FILE="$DIR/git.diff";
-VERSION="0.2";
+VERSION="0.3";
 #####################################################################
 
 
@@ -58,24 +73,28 @@ source common/repository;
 displayHelp()
 {
 
-    local STRING="Usage:\n
-                 $( basename $0 ) [b:cf:ghp:]\n\n
-                 Options:\n
-                 -b \t Requires argument, a branch name (default:\
-                       $BRANCH)\n
-                 -c \t Commit changes after synchronization\n
-                 -f \t Requires argument to set alternative\
-                       path to single-file patch (default:\
-                       $PATCH_FILE)\n
-                 -g \t Push the committed changes to the server\n
-                 -h \t Display this help and exit\n
-                 -p \t Requires argument to set alternative\
-                       path to patches (default: $PATCH_DIR)\n\n";
+    local STRING="Script $( basename $0 ) version $VERSION\n
+                 Usage:\n
+                   $( basename $0 ) [b:cf:ghp:]\n\n
+                 Options:\n\n
+                   -b or --branch\n
+                      \t Requires branch name. Defaults to \"master\".\n\n
+                   -c or --commit\n
+                      \t Commit changes after synchronization.\n\n
+                   -f or --patchfile\n
+                      \t Requires argument to set alternative path to single-file patch\n
+                      \t (default: $PATCH_FILE).\n\n
+                   -g or --push\n
+                      \t Push the committed changes to the remote server.\n\n
+                   -h or --help\n
+                      \t Display this help and exit.\n\n
+                   -p or --patchdir\n
+                      \t Requires argument to set alternative path to patches\n
+                      \t (default: $PATCH_DIR).\n\n";
 
-    echo -e $STRING;
+    echo -e $STRING | more;
 
     exit 0;
-
 }
 
 
@@ -157,42 +176,66 @@ doPush()
 # Cycle through them.
 if [ $# -gt 0 ]; then
 
-    while getopts "b:cf:ghp:" opt; do
+    OPTIONS=$( getopt \
+               --options b:,c,f:,g,h,p: \
+               --longoptions branch: \
+               --longoptions commit \
+               --longoptions patchfile: \
+               --longoptions push \
+               --longoptions help \
+               --longoptions patchdir: \
+               --name "$( basename "$0" )" \
+               -- "$@" );
 
-        case "$opt" in
+    eval set -- $OPTIONS;
 
-            b) # Set branch name
-               [[ ! -z "$OPTARG" ]] && \
-                   BRANCH=$OPTARG;
-               ;;
+    while true
+    do
+        case "$1" in
 
-            c) # Enable commit after sync
-               FLAG_COMMIT=1;
-               ;;
+            -b|--branch)
+              # Set branch name
+              [[ ! -z "$2" ]] && \
+                  BRANCH=$2;
+              shift;
+              ;;
 
-            f) # Alternative path to patch-file
-               [[ -f $OPTARG ]] && \
-                   PATCH_FILE=$OPTARG;
-               ;;
+            -c|--commit)
+              # Enable commit after sync
+              FLAG_COMMIT=1;
+              ;;
 
-            g) # Enable push after sync and commit
-               FLAG_PUSH=1;
-               ;;
+            -f|--patchfile)
+              # Alternative path to patch-file
+              [[ -f $2 ]] && \
+                  PATCH_FILE=$2;
+              ;;
 
-            h) # Display help and usage info and exit
-               displayHelp;
-               ;;
+            -g|--push)
+              # Enable push after sync and commit
+              FLAG_PUSH=1;
+              ;;
 
-            p) # Alternative path to patches
-               [[ -d $OPTARG ]] && \
-                   PATCH_DIR=$OPTARG;
-               ;;
+            -h|--help)
+              # Display help and usage info and exit
+              displayHelp;
+              ;;
 
-            *) # Option is omitted, display usage info
-               displayHelp;
-               ;;
+            -p|--patchdir)
+              # Alternative path to patches
+              [[ -d $2 ]] && \
+                  PATCH_DIR=$2;
+              shift;
+              ;;
+
+            --)
+              shift;
+              break;
+              ;;
 
         esac
+
+        shift;
 
     done
 
