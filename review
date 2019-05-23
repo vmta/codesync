@@ -19,12 +19,15 @@
 # -v - set verbosity level
 #
 # Author: Igor Gunia <vmta@yahoo.com>
-# Date:   2019-02-14
-# Ver.:   0.2
+# Date:   2019-05-23
+# Ver.:   0.3
+#
+# v.0.3   2019-05-23
+#         Include long form of options
 #
 # v.0.2   2019-02-14
 #         Allow command-line arguments "c", for specifying CLONE
-#         repository and "m". for specifying MAINSTREAM reposditory
+#         repository and "m". for specifying MAINSTREAM repository
 #
 # v.0.1   2018-09-24
 #         Initial version
@@ -41,7 +44,7 @@ source $DIR/common/config;
 #
 PATCH_DIR="$DIR/git.diffs";
 PATCH_FILE="$DIR/git.diff";
-VERSION="0.2";
+VERSION="0.3";
 #####################################################################
 
 
@@ -187,66 +190,94 @@ doReview()
 # Cycle through them.
 if [[ $# -gt 0 ]]; then
 
-    while getopts "b:c:e:f:hm:p:r:v" opt; do
+    OPTIONS=$( getopt \
+               --options b:,c:,e:,f:,h,m:,p:,r:,v \
+               --longoptions branch: \
+               --longoptions clone: \
+               --longoptions editor: \
+               --longoptions help \
+               --longoptions mainstream: \
+               --longoptions read: \
+               --longoptions verbose \
+               --name "$( basename "$0" )" \
+               -- "$@" );
 
-        case $opt in
+    eval set -- $OPTIONS;
 
-            b)  # Set branch name
-                [[ ! -z "$OPTARG" ]] && \
-                    BRANCH=$OPTARG;
-                ;;
+    while true
+    do
+        case "$1" in
 
-            c)  # Set cloned repo name
-                [[ ! -z "$OPTARG" ]] && \
-                    CLONE=$OPTARG;
-                ;;
+            -b|--branch)
+              # Set branch name
+              [[ ! -z "$2" ]] && \
+                  BRANCH=$2;
+              shift;
+              ;;
 
-            e)  # Set editor to nano if 'remote' is specified
-                [[ "$OPTARG" == "remote" ]] && \
-                    EDITOR="/bin/nano";
-                ;;
+            -c|--clone)
+              # Set cloned repo name
+              [[ ! -z "$2" ]] && \
+                  CLONE=$2;
+              shift;
+              ;;
 
-            f)  # Alternative path to patch-file
-                if [ -f $OPTARG ]; then
-                    PATCH_FILE=$OPTARG;
-                else
-                    echo "$OPTARG is not a valid file, will try $PATCH_FILE";
-                fi
-                ;;
+            -e|--editor)
+              # Set editor to nano if 'remote' is specified
+              [[ "$2" == "remote" ]] && \
+                  EDITOR="/bin/nano";
+              shift;
+              ;;
 
-            h)  # Display help and usage info and exit
-                displayHelp;
-                ;;
+            -f|--file)
+              # Set alternate path to patch-file
+              [[ ! -z "$2" ]] && \
+                  PATCH_FILE="$2";
+              shift;
+              ;;
 
-            m)  # Set mainstream repo name
-                [[ ! -z "$OPTARG" ]] && \
-                    MAINSTREAM=$OPTARG;
-                ;;
+            -h|--help)
+              # Display help and usage info and exit
+              displayHelp;
+              ;;
 
-            p)  # Alternative path to patches
-                if [ -d $OPTARG ]; then
-                    PATCH_DIR=$OPTARG;
-                else
-                    echo "$OPTARG is not a valid path, will try $PATCH_DIR";
-                fi
-                ;;
+            -m|--mainstream)
+              # Set mainstream repo name
+              [[ ! -z "$2" ]] && \
+                  MAINSTREAM=$2;
+              shift;
+              ;;
 
-            r)  # Define if all patch files should be reviewed
-                [[ "$OPTARG" == "all" ]] && \
-                    FLAG_READALL=1;
-                ;;
+            -p|--patches)
+              # Set alternate path to patches
+              [[ -d $2 ]] && \
+                  PATCH_DIR=$2;
+              shift;
+              ;;
 
-            v)  # Set DEBUG
-                ((FLAG_DEBUG++));
-                ;;
+            -r|--read)
+              # Define if all patch files should be reviewed
+              [[ "$2" == "all" ]] && \
+                  FLAG_READALL=1;
+              shift;
+              ;;
 
-            default) # Option is omitted
-                     # Display help and usage info and exit
-                displayHelp;
-                ;;
+            -v|--verbose)
+              # Set DEBUG
+              ((FLAG_DEBUG++));
+              ;;
+
+            --)
+              shift;
+              break;
+              ;;
 
         esac
+
+        shift;
+
     done
+
 
     # PERFORM SOME ACTION
 
