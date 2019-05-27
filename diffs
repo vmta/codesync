@@ -21,8 +21,11 @@
 # information with immediate execution abortion.
 #
 # Author: Igor Gunia <vmta@yahoo.com>
-# Date:   2019-02-20
-# Ver.:   0.3
+# Date:   2019-05-27
+# Ver.:   0.4
+#
+# v.0.4   2019-05-27
+#         Include long form of options
 #
 # v.0.3   2019-02-20
 #         Implement double checking on user request to pull updates
@@ -156,55 +159,88 @@ function interact()
 #
 if [[ $# -gt 0 ]]; then
 
-    while getopts "ab:c:him:p:uv" opt; do
-        case $opt in
+    OPTIONS=$( getopt \
+               --options a,b:,c:,h,i,m:,p:,u,v \
+               --longoptions all \
+               --longoptions branch: \
+               --longoptions clone: \
+               --longoptions help \
+               --longoptions interact \
+               --longoptions mainstream: \
+               --longoptions patchmode: \
+               --longoptions update \
+               --longoptions verbose \
+               --name "$( basename "$0" )" \
+               -- "$@" );
 
-            a)  # Perform sync to the latest MAINSTREAM HEAD
-                FLAG_FIRST_UNSYNCED=0;
-                ;;
+    eval set -- $OPTIONS;
 
-            b)  # Set branch name
-                [[ ! -z "$OPTARG" ]] && \
-                    BRANCH=$OPTARG;
-                ;;
+    while true
+    do
+        case "$1" in
 
-            c)  # Set cloned repo name
-                [[ ! -z "$OPTARG" ]] && \
-                    CLONE=$OPTARG;
-                ;;
+            -a|--all)
+              # Perform sync to the latest MAINSTREAM HEAD
+              FLAG_FIRST_UNSYNCED=0;
+              ;;
 
-            h)  # Display help and usage info and exit
-                displayHelp;
-                ;;
+            -b|--branch)
+              # Set branch name
+              [[ ! -z "$2" ]] && \
+                  BRANCH=$2;
+              shift;
+              ;;
 
-            i)  # Set interactivity
-                FLAG_INTERACT=1;
-                ;;
+            -c|--clone)
+              # Set cloned repo name
+              [[ ! -z "$2" ]] && \
+                  CLONE=$2;
+              shift;
+              ;;
 
-            m)  # Set mainstream repo name
-                [[ ! -z "$OPTARG" ]] && \
-                    MAINSTREAM=$OPTARG;
-                ;;
+            -h|--help)
+              # Display help and usage info and exit
+              displayHelp;
+              ;;
 
-            p)  # Switch single/multi file patch creation mode
-                [[ ! -z "$OPTARG" && "$OPTARG" == "single" ]] && \
-                    ONE_FILE_DIFF=1;
-                ;;
+            -i|--interact)
+              # Set interactivity
+              FLAG_INTERACT=1;
+              ;;
 
-            u)  # Pull updates to repositories
-                FLAG_PULL=1;
-                ;;
+            -m|--mainstream)
+              # Set mainstream repo name
+              [[ ! -z "$2" ]] && \
+                  MAINSTREAM=$2;
+              shift;
+              ;;
 
-            v)  # Set DEBUG
-                ((FLAG_DEBUG++));
-                ;;
+            -p|--patchmode)
+              # Switch single/multi file patch creation mode
+              [[ ! -z "$2" && "$2" == "single" ]] && \
+                  ONE_FILE_DIFF=1;
+              shift;
+              ;;
 
-            default) # Option is omitted
-                     # Display help and usage info and exit
-                displayHelp;
-                ;;
+            -u|--update)
+              # Pull updates to repositories
+              FLAG_PULL=1;
+              ;;
+
+            -v|--verbose)
+              # Set DEBUG
+              ((FLAG_DEBUG++));
+              ;;
+
+            --)
+              shift;
+              break;
+              ;;
 
         esac
+
+        shift;
+
     done
 
     # PERFORM SOME ACTION
