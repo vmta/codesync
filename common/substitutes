@@ -81,11 +81,11 @@ s/umkoin\/umkoin\/pull\//bitcoin\/bitcoin\/pull\//g
 # Genesis block takeover
 s/04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38c4f35504e51ec112de5c384df7ba0b8d578a4c702b6bf11d5f/04880766d2f2a4f8e8a2ca8ef5f6baf014f2ac460acc69604df1af697ec9cd9d01548a7d6015e0cabfcbc160316143d9aae4a17c944f611b8daf18fb1492935d67/g
 s/04 67 8a fd b0/04 88 07 66 d2/g
-# Diff git
-#/^diff --git*/ s/ b\// b\/bitcoin\//
-#/^+++ b*/{/b\/bitcoin\//! s/ b\// b\/bitcoin\//}
-#/^+++ b*/ s/umkoin/bitcoin/g
-
 
 # Change protocol https to http wherever our site is mentioned
 /umkoin.org/ s/https\:/http\:/g
+
+# Change bitcoin to umkoin in gitian descriptors
+s/bitcoin-core-linux/umkoin-core-linux/g
+s/bitcoin-core-osx/umkoin-core-osx/g
+s/bitcoin-core-win/umkoin-core-win/g
