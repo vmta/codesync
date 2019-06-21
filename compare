@@ -34,7 +34,7 @@ function mangleNameAB()
     local NAME=$1;
     local A=${2:-$CLONE};
     local B=${3:-$MAINSTREAM};
-    if [[ ! -z "${FILE}" ]]; then
+    if [[ ! -z "${NAME}" ]]; then
         echo $NAME | sed 's/'${A}'/'${B}'/g';
     fi
 }
