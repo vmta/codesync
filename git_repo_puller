@@ -3,8 +3,7 @@
 #####################################################################
 # REDEFINE BUILTIN COMMANDS (SILENCER)
 #####################################################################
-pushd() { command pushd "$@" > /dev/null; }
-popd() { command popd "$@" > /dev/null; }
+source common/silencer;
 #####################################################################
 
 for REPOSITORY in $(ls -A)
