@@ -1,0 +1,20 @@
+#/usr/bin/env bash
+
+#####################################################################
+# REDEFINE BUILTIN COMMANDS (SILENCER)
+#####################################################################
+pushd() { command pushd "$@" > /dev/null; }
+popd() { command popd "$@" > /dev/null; }
+#####################################################################
+
+for REPOSITORY in $(ls -A)
+do
+    if [[ -d $REPOSITORY ]]; then
+        pushd $REPOSITORY;
+        [[ "$(git rev-parse --is-inside-work-tree 2>/dev/null)" == "true"  ]] && \
+            git pull origin --tags > /dev/null 2>&1;
+        popd;
+    fi
+done
+
+exit $?
