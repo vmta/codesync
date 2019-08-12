@@ -1,12 +1,24 @@
 #/usr/bin/env bash
 
+
+#####################################################################
+# Get script absolute path and move in
+#####################################################################
+DIR=$(cd `dirname $0` && pwd);
+pushd $DIR;
+
+
 #####################################################################
 # REDEFINE BUILTIN COMMANDS (SILENCER)
 #####################################################################
-source common/silencer;
-#####################################################################
+source $DIR/common/silencer;
 
-for REPOSITORY in $(ls -A)
+
+#####################################################################
+# Cycle through directories, check if it is a repository and pull
+# updates 
+#####################################################################
+for REPOSITORY in $(ls -A $DIR)
 do
     if [[ -d $REPOSITORY ]]; then
         pushd $REPOSITORY;
@@ -15,5 +27,12 @@ do
         popd;
     fi
 done
+
+
+#####################################################################
+# Move out of script absolute path
+#####################################################################
+popd;
+
 
 exit $?
