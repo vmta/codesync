@@ -14,6 +14,23 @@ review: ## Review the prepared patches prior to their application
 status: ## Check the status of the clone repository if it falls behind the mainstream
 	./status -v -u
 
+.PHONY: sync
+sync: ## Synchronize code (nothing is committed yet)
+	./sync -b master
+
+.PHONY: sync-all
+sync-all: ## Synchronize code, commit and push committed changes to remote
+	./sync -b master --commit --push
+
+.PHONY: sync-commit
+sync-commit: ## Synchronize code and commit
+	./sync -b master --commit
+
+
+.PHONY: sync-push
+sync-push: ## Push synchronized and committed code
+	./sync -b master --push
+
 .PHONY: help
 help: ## Show usage help
 	@echo "Valid targets:"
