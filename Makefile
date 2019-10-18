@@ -26,7 +26,6 @@ sync-all: ## Synchronize code, commit and push committed changes to remote
 sync-commit: ## Synchronize code and commit
 	./sync -b master --commit
 
-
 .PHONY: sync-push
 sync-push: ## Push synchronized and committed code
 	./sync -b master --push
