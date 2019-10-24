@@ -89,3 +89,6 @@ s/04 67 8a fd b0/04 88 07 66 d2/g
 s/bitcoin-core-linux/umkoin-core-linux/g
 s/bitcoin-core-osx/umkoin-core-osx/g
 s/bitcoin-core-win/umkoin-core-win/g
+
+# Change the bench raw block from 413567 to 47789
+s/block413567/block47789/g
