@@ -92,3 +92,6 @@ s/bitcoin-core-win/umkoin-core-win/g
 
 # Change the bench raw block from 413567 to 47789
 s/block413567/block47789/g
+
+# Change bitcoin-core in ts files
+/\<name\>/ s/bitcoin-core/umkoin-core/g
