@@ -89,16 +89,16 @@ s/04 67 8a fd b0/04 88 07 66 d2/g
 
 # Chainparams
 ## pszTimestamp
-0,/pszTimestamp/{s/The\ Times\ 03\/Jan\/2009\ Chancellor\ on\ brink\ of\ second\ bailout\ for\ banks/UMK\ est\.\ 2006\.\ Umkoin\ est\.\ 2017\./}
+/pszTimestamp/ s/The\ Times\ 03\/Jan\/2009\ Chancellor\ on\ brink\ of\ second\ bailout\ for\ banks/UMK\ est\.\ 2006\.\ Umkoin\ est\.\ 2017\./
 ## BIP16Exception
-0,/BIP16Exception/{s/0x00000000000002dc756eebf4f49723ed8d30cc28a5f108eb94b1ba88ac4f9c22/0x00000000470b9e0dd4f6fb72c93e0c655f68069899a5b2a0b4e413ef8006469a/}
+/BIP16Exception/ s/0x00000000000002dc756eebf4f49723ed8d30cc28a5f108eb94b1ba88ac4f9c22/0x00000000470b9e0dd4f6fb72c93e0c655f68069899a5b2a0b4e413ef8006469a/
 /BIP16Exception/ s/0x00000000dd30457c001f4095d208cc1296b0eed002427aa599874af7a432b105/0x00000000243306f10d1ba825689fb5b892c80a1ea1b41d79cad46b8b0ab09429/
 ## BIP34Height
-0,/BIP34Height/{s/227931/0/}
+/BIP34Height/ s/227931/0/
 /BIP34Height/ s/21111/0/
 /BIP34Height/ s/500/0/
 ## BIP34Hash
-0,/BIP34Hash/{s/0x000000000000024b89b42a942fe0d9fea3bb44ab7bd1b19115dd6a759c0808b8/0x00000000470b9e0dd4f6fb72c93e0c655f68069899a5b2a0b4e413ef8006469a/}
+/BIP34Hash/ s/0x000000000000024b89b42a942fe0d9fea3bb44ab7bd1b19115dd6a759c0808b8/0x00000000470b9e0dd4f6fb72c93e0c655f68069899a5b2a0b4e413ef8006469a/
 /BIP34Hash/ s/0x0000000023b3a96d3484e5abb3755c413e7d41500f8e2a5c3f0dd01299cd8ef8/0x00000000243306f10d1ba825689fb5b892c80a1ea1b41d79cad46b8b0ab09429/
 ## BIP65Height
 /BIP65Height/ s/388381\;\ \/\/\ 000000000000000004c2b624ed5d7756c508d90fd0da2c7c679febfa6c4735f0/0\;/
@@ -117,21 +117,34 @@ s/04 67 8a fd b0/04 88 07 66 d2/g
 ## MinBIP9WarningHeight
 /MinBIP9WarningHeight/ s/483840/576/
 /MinBIP9WarningHeight/ s/486640/288/
+/MinBIP9WarningHeight/ s/836640/288/
 ## nPowTargetTimeSpan
 /nPowTargetTimespan/ s/14\ \*\ 24\ \*\ 60\ \*\ 60;\ \/\/\ two\ weeks/1\ \*\ 24\ \*\ 60\ \*\ 60;\ \/\/\ one\ day/
 ## nRuleChangeActivationThreshold
 /nRuleChangeActivationThreshold/ s/1916\;\ \/\/\ 95\%\ of\ 2016/137\;\ \/\/\ 95\%\ for\ mainnet/
-/nRuleChangeActivationThreshold/ s/1512/108/
+/nRuleChangeActivationThreshold/ s/1512\;/108\;/
 ## nMinerConfirmationWindow
-0,/nMinerConfirmationWindow/{s/2016/144/}
+/nMinerConfirmationWindow/ s/2016\;/144\;/
 ## DEPLOYMENT_TESTDUMMY nStatrTime
 0,/nStartTime/{s/1199145601\;\ \/\/\ January\ 1,\ 2008/1511563812\;\ \/\/\ November\ 24,\ 2017/}
 /nStartTime/ s/1199145601\;\ \/\/\ January\ 1,\ 2008/1511678228\;\ \/\/\ November\ 26,\ 2017/
 ## DEPLOYMENT_TESTDUMMY nTimeout
 /nTimeout/ s/1230767999\;\ \/\/\ December\ 31,\ 2008/1514112600\;\ \/\/\ December\ 24,\ 2017/
-
 ## nDefaultPort
 /nDefaultPort\ \=\ 18333/ s/18333/16333/
+/nDefaultPort\ \=\ 18444/ s/18444/16444/
+## genesis
+/genesis/ s/1231006505\,\ 2083236893/1511563812\,\ 4263252653/
+/genesis/ s/1296688602\,\ 414098458/1511678228\,\ 1037567534/
+/genesis/ s/1296688602\,\ 2/1511512200\,\ 4/
+## hashGenesisBlock
+/hashGenesisBlock/ s/0x000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f/0x00000000470b9e0dd4f6fb72c93e0c655f68069899a5b2a0b4e413ef8006469a/
+/hashGenesisBlock/ s/0x000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943/0x00000000243306f10d1ba825689fb5b892c80a1ea1b41d79cad46b8b0ab09429/
+/hashGenesisBlock/ s/0x0f9188f13cb7b2c71f2a335e3a4fc328bf5beb436012afca590b1a11466e2206/0x60b48405c3efa2bd7aa6a8bc206e3369e58d15f60cba7a915769e9669758cb6d/
+## hashMerkleRoot
+#0,/hashMerkleRoot/{s/0x4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b/0x550ccf92f28cb76c3f8ccd5073a0175182ac8b03abe96d6b18da9b46f2e2941d/}
+#0,/hashMerkleRoot/{s/0x4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b/0x550ccf92f28cb76c3f8ccd5073a0175182ac8b03abe96d6b18da9b46f2e2941d/}
+/hashMerkleRoot/ s/0x4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b/0x550ccf92f28cb76c3f8ccd5073a0175182ac8b03abe96d6b18da9b46f2e2941d/
 
 # Change protocol https to http wherever our site is mentioned
 /umkoin.org/ s/https\:/http\:/g
