@@ -116,8 +116,7 @@ s/04 67 8a fd b0/04 88 07 66 d2/g
 /SegwitHeight/ s/834624\;\ \/\/\ 00000000002b980fcd729daaa248fd9316a5200e9b367f4ff2c42453e84201ca/144\;/
 ## MinBIP9WarningHeight
 /MinBIP9WarningHeight/ s/483840/576/
-/MinBIP9WarningHeight/ s/486640/288/
-/MinBIP9WarningHeight/ s/836640/288/
+/MinBIP9WarningHeight/ s/836640/40644/
 ## nPowTargetTimeSpan
 /nPowTargetTimespan/ s/14\ \*\ 24\ \*\ 60\ \*\ 60;\ \/\/\ two\ weeks/1\ \*\ 24\ \*\ 60\ \*\ 60;\ \/\/\ one\ day/
 ## nRuleChangeActivationThreshold
