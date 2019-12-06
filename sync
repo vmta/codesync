@@ -133,6 +133,10 @@ doCommit()
     local STR2="$( git log --format='%s' -n 1 )";
     popd;
 
+    if [[ $STR2 =~ [Bb]itcoin ]]; then
+       STR2=$(echo ${STR2} | sed -e 's/bitcoin/umkoin/g' -e 's/Bitcoin/Umkoin/g');
+    fi
+
     pushd $CLONE;
     git checkout $BRANCH;
     git add -A;
