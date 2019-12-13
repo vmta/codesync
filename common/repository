@@ -145,7 +145,10 @@ function getLocalBranches()
 #
 function getCurrentBranch()
 {
-    echo $( git branch | grep \* | tr -d '\*|[:blank:]' );
+#    Replace the solution with a git one-liner to simplify
+#    the code and avoid running too many shell pipes
+#    echo $( git branch | grep \* | tr -d '\*|[:blank:]' );
+    echo $( git rev-parse --abbrev-ref HEAD );
 }
 
 
