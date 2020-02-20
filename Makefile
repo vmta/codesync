@@ -1,34 +1,34 @@
 .PHONY: compare
 compare: ## Compare two repositories file-to-file folder-to-folder
-	./compare
+	@./compare
 
 .PHONY: diffs
 diffs: ## Retrieve diff patches from mainstream pre-processed and prepared to be applied to the clone
-	./diffs -p multi -u
+	@./diffs -p multi -u
 
 .PHONY: review
 review: ## Review the prepared patches prior to their application
-	./review -r all
+	@./review -r all
 
 .PHONY: status
 status: ## Check the status of the clone repository if it falls behind the mainstream
-	./status -v -u
+	@./status -v -u
 
 .PHONY: sync
 sync: ## Synchronize code (nothing is committed yet)
-	./sync -b master
+	@./sync -b master
 
 .PHONY: sync-all
 sync-all: ## Synchronize code, commit and push committed changes to remote
-	./sync -b master --commit --push
+	@./sync -b master --commit --push || true
 
 .PHONY: sync-commit
 sync-commit: ## Synchronize code and commit
-	./sync -b master --commit
+	@./sync -b master --commit || true
 
 .PHONY: sync-push
 sync-push: ## Push synchronized and committed code
-	./sync -b master --push
+	@./sync -b master --push || true
 
 .PHONY: help
 help: ## Show usage help
