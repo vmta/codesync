@@ -173,6 +173,8 @@ function getCurrentRepo()
 # requested if no arguments provided, otherwise update to specified
 # branch.
 #
+# [UPD] 2020-04-21: pull tags
+#
 function updateRepoAuto()
 {
     local BRANCH="";
@@ -181,7 +183,7 @@ function updateRepoAuto()
         BRANCH=$( getCurrentBranch ) || \
         BRANCH=$1;
 
-    git pull origin $BRANCH > /dev/null 2>&1;
+    git pull origin $BRANCH --tags > /dev/null 2>&1;
 }
 
 
