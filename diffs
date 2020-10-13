@@ -34,7 +34,7 @@
 #
 # v.0.2   2019-02-14
 #         Allow command-line arguments "c", for specifying CLONE
-#         repository and "m". for specifying MAINSTREAM reposditory
+#         repository and "m". for specifying MAINSTREAM repository
 #
 # v.0.1   2019-02-02
 #         Initial version
