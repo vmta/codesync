@@ -21,8 +21,13 @@
 # information with immediate execution abortion.
 #
 # Author: Igor Gunia <vmta@yahoo.com>
-# Date:   2019-05-27
-# Ver.:   0.4
+# Date:   2020-02-10
+# Ver.:   0.5
+#
+# v.0.5   2020-02-10
+#         When creating new dirs, use mkdir with "-p" option
+#         and make it more prone to error, when folder
+#         hierarchy changes
 #
 # v.0.4   2019-05-27
 #         Include long form of options
@@ -324,7 +329,7 @@ if [[ $# -gt 0 ]]; then
                                   head -n 1 )";
             if [[ ! -f "$DIR/$CLONE/${FILES[-1]}" ]]; then
                 [[ ! -d "$( dirname $DIR/$CLONE/${FILES[-1]} )" ]] && \
-                    mkdir "$( dirname $DIR/$CLONE/${FILES[-1]} )";
+                    mkdir -p "$( dirname $DIR/$CLONE/${FILES[-1]} )";
                 touch "$DIR/$CLONE/${FILES[-1]}";
             fi
 
